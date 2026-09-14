@@ -1,0 +1,38 @@
+{
+  "project": "Premier League Analytics Lab",
+  "milestones": [
+    "M0 repository foundation",
+    "M1 ingestion and provenance",
+    "M2 PostgreSQL analytics layer",
+    "M3 EDA and data quality",
+    "M4 advanced player statistics",
+    "M5 market value model",
+    "M6 Elo/Poisson/Dixon-Coles",
+    "M7 calibrated match ML",
+    "M8 Streamlit application",
+    "M9 quality and deployment",
+    "M10 portfolio release"
+  ],
+  "primary_metrics": {
+    "market_value": [
+      "MAE",
+      "RMSE",
+      "R2",
+      "median_AE",
+      "time_split_error"
+    ],
+    "match_probability": [
+      "log_loss",
+      "brier",
+      "RPS",
+      "calibration"
+    ]
+  },
+  "scope": {
+    "v1_active_competitions": [
+      "EPL"
+    ],
+    "architecture": "competition_agnostic",
+    "future_scouting": "cross_league"
+  }
+}

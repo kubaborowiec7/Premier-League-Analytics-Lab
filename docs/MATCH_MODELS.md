@@ -10,7 +10,7 @@ bytes and retrieval/terms metadata remain under ignored `data/raw/`. The existin
 
 ```bash
 python scripts/train_match_models.py --stage select --download
-python scripts/train_match_models.py --stage final
+python scripts/train_match_models.py --stage final --download
 python scripts/plot_match_report.py
 ```
 

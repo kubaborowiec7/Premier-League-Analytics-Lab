@@ -79,3 +79,17 @@ jobs:
         with:
           name: m2-analytics-verification
           path: artifacts/m2-verification.json
+
+      - name: Offline EDA report and clean-kernel notebook
+        run: |
+          python scripts/run_quality.py
+          python scripts/execute_quality_notebook.py
+
+      - name: Upload EDA report and executed notebook
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-data-quality
+          path: |
+            artifacts/m3-quality.json
+            artifacts/m3-executed.ipynb
+            artifacts/m3/*.png

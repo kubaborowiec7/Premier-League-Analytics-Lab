@@ -381,6 +381,21 @@ advanced SQL examples and verification. No new data is downloaded by this comman
 
 ---
 
+## M3 exploratory data quality
+
+With the pinned M1 archives available:
+
+```bash
+python scripts/run_quality.py
+python scripts/execute_quality_notebook.py
+```
+
+Both commands run offline without PostgreSQL. The clean-kernel notebook produces
+missingness/coverage diagnostics, match and valuation distributions, and a leakage
+audit. [Measured findings and tracked data issues](docs/DATA_QUALITY.md) explain why
+the current sample is development data and is not yet sufficient for player models.
+Reports, executed notebooks and figures stay under ignored `artifacts/`.
+
 ## GitHub philosophy
 
 The GitHub history is part of the portfolio.
@@ -403,7 +418,8 @@ See `docs/GITHUB_WORKFLOW.md`.
 | M0 — Repository foundation | Implemented |
 | M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
 | M2 — PostgreSQL analytics | Implemented; SQL tests and sample coverage verified in CI |
-| M3–M10 | Not started |
+| M3 — EDA and data quality | Implemented; offline tests and clean-kernel notebook verified |
+| M4–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
 commands; dashboard-ready features, trained models and predictions are not built yet.

@@ -148,6 +148,14 @@ without a database or network. `scripts/run_quality.py` writes aggregate diagnos
 under ignored artifacts and uploaded in CI. No canonical/raw data or model features
 are changed. See [DATA_QUALITY.md](DATA_QUALITY.md) for the leakage audit and findings.
 
+M4 adds `data/appearances.py` for published source-ID joins, `features/players.py` for
+strict-cutoff aggregation and fitted peer normalization, and `statistics/players.py`
+for bootstrap intervals, PCA and scoped similarity. `scripts/build_player_analytics.py`
+creates version-pinned descriptive artifacts and a real profile example. These outputs
+preserve competition/season/reference date and snapshot-position context; they do not
+populate PostgreSQL or serve as historically verified predictive features. See
+[PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md).
+
 ---
 
 ## Reproducibility

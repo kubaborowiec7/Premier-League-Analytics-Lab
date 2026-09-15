@@ -1,0 +1,23 @@
+{
+  "competition_id": "EPL",
+  "competition_name": "Premier League",
+  "country": "England",
+  "source_competition_code": "GB1",
+  "source_season": "2023",
+  "season": "2023/24",
+  "start_date": "2023-07-01",
+  "end_date": "2024-06-30",
+  "reference_date": "2024-07-01",
+  "expected_counts": {
+    "matches": 380,
+    "appearances": 11384,
+    "players": 570,
+    "eligible_players": 404,
+    "striker_pca_players": 47
+  },
+  "sha256": {
+    "games": "142561989017d379bcf9e72bad0b87e0996bae0e7b710ebb3def9255f464c741",
+    "appearances": "e096c2b158fc3d52c4550526c4d4850dd62f31007652f4bcae112eadb1646802",
+    "players": "d22e407981d5b51a79bf8ff59835729f3526f7dc3495a6d8ed2f852ed2e86403"
+  }
+}

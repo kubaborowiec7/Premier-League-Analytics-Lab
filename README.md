@@ -396,6 +396,20 @@ audit. [Measured findings and tracked data issues](docs/DATA_QUALITY.md) explain
 the current sample is development data and is not yet sufficient for player models.
 Reports, executed notebooks and figures stay under ignored `artifacts/`.
 
+## M4 player statistics
+
+```bash
+python scripts/build_player_analytics.py --download
+```
+
+This explicitly acquires pinned published appearance data and builds per-90 rates,
+position peer percentiles/z-scores, exposure shrinkage, bootstrap intervals, PCA and
+player similarity. Repeat without `--download` for offline execution. The real example
+and chart are saved under `artifacts/m4/`; scoped analytical tables go to
+`data/processed/m4/`. [Methodology and example](docs/PLAYER_ANALYTICS.md) explain the
+snapshot-position and limited-metric caveats. The initial sample covers 570 players
+and 11,384 appearances. These artifacts are descriptive; no predictor is trained.
+
 ## GitHub philosophy
 
 The GitHub history is part of the portfolio.
@@ -419,7 +433,8 @@ See `docs/GITHUB_WORKFLOW.md`.
 | M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
 | M2 — PostgreSQL analytics | Implemented; SQL tests and sample coverage verified in CI |
 | M3 — EDA and data quality | Implemented; offline tests and clean-kernel notebook verified |
-| M4–M10 | Not started |
+| M4 — Advanced player statistics | Implemented; tests and pinned player profile verified |
+| M5–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
 commands; dashboard-ready features, trained models and predictions are not built yet.

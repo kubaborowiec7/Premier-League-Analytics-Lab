@@ -2,6 +2,12 @@
 
 This project should be statistically stronger than a typical "train XGBoost and show accuracy" portfolio project.
 
+M4 implements the player-statistics subset below. Exact percentile tie handling,
+population z-scores, exposure shrinkage, match-resampled intervals and PCA/similarity
+contracts are documented in [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md), with a measured
+example and source limitations. Snapshot position context is descriptive, not a
+verified historical role. Modelling sections remain specifications for later milestones.
+
 ## 1. Player metrics
 
 ### Per-90 normalization

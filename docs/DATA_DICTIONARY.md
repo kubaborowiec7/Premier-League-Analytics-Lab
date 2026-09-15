@@ -1,5 +1,15 @@
 # Data dictionary
 
+## M4 player artifacts
+
+`data/processed/m4/appearances.parquet` is keyed by source match/player and retains
+competition, season, source club, match date, exposure/counts and position context.
+`player_features.parquet` has one row per player/competition/season at `reference_date`,
+with raw totals, per-90 counts, peer counts, percentiles, z-scores, exposure weights
+and stabilized rates. `player_pca.parquet` retains that scope with PC1/PC2.
+All are descriptive artifact outputs, separate from canonical PostgreSQL tables.
+See [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md) for formulas and missing-value semantics.
+
 ## M2 analytical views
 
 See [SQL_ANALYTICS.md](SQL_ANALYTICS.md) for the complete analytical contracts and

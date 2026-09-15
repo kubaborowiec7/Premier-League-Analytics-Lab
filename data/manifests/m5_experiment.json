@@ -1,0 +1,24 @@
+{
+  "experiment_version": "m5-v1",
+  "competition_id": "EPL",
+  "source_competition_code": "GB1",
+  "season_start_month": 7,
+  "history_start": "2018-07-01",
+  "train_start": "2019-07-01",
+  "validation_start": "2024-07-01",
+  "calibration_start": "2025-01-01",
+  "test_start": "2025-07-01",
+  "test_end": "2026-06-30",
+  "lookback_days": 365,
+  "activity_days": 90,
+  "primary_metric": "mae_eur",
+  "seed": 42,
+  "interval_alpha": 0.1,
+  "interval_scale_floor_eur": 1000000,
+  "sha256": {
+    "games": "142561989017d379bcf9e72bad0b87e0996bae0e7b710ebb3def9255f464c741",
+    "appearances": "e096c2b158fc3d52c4550526c4d4850dd62f31007652f4bcae112eadb1646802",
+    "players": "d22e407981d5b51a79bf8ff59835729f3526f7dc3495a6d8ed2e86403",
+    "player_valuations": "608e32e5ad2231074f3505c469ad727be66d7e6efda6af918afd85379439631d"
+  }
+}

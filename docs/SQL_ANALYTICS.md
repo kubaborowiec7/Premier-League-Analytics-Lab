@@ -114,3 +114,8 @@ kickoffs, timezone independence, competition/season separation, transfers, incom
 statistics, source-separated valuations and the example queries. SQL invariants cover
 view uniqueness, two sides per result, balanced goals/points, cutoff bounds and
 appearance club participation. CI also installs/replays M2 on the pinned M1 sample.
+
+Verification (2026-09-15): 62 offline tests passed locally; all 13 PostgreSQL tests
+passed in [GitHub Actions](https://github.com/kubaborowiec7/Premier-League-Analytics-Lab/actions/runs/34946864403)
+on commit `877e711`, including the full pinned-sample installation and replay.
+Local Docker was unavailable, so the real database evidence comes from CI.

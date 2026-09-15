@@ -402,7 +402,7 @@ See `docs/GITHUB_WORKFLOW.md`.
 |---|---|
 | M0 — Repository foundation | Implemented |
 | M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
-| M2 — PostgreSQL analytics | Implemented; verification in progress |
+| M2 — PostgreSQL analytics | Implemented; SQL tests and sample coverage verified in CI |
 | M3–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI

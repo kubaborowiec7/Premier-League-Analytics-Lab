@@ -70,7 +70,13 @@ Suggested commits:
 
 ## M2 — PostgreSQL analytics layer
 
-Implementation status: implemented; verification in progress. Tracking issue: #3.
+Implementation status: complete. Tracking issue: #3; implementation PR: #4.
+Local compileall, Ruff and Compose validation passed; pytest passed 62 offline tests
+and skipped 13 opt-in PostgreSQL tests. All 13 PostgreSQL 16 tests, M1 replay and
+repeated M2 installation/coverage checks passed in GitHub Actions on commit `877e711`:
+https://github.com/kubaborowiec7/Premier-League-Analytics-Lab/actions/runs/34946864403.
+The pinned sample produces 760 team-match rows, 948 valuation-only player-season rows
+and 2,093 source-separated valuations. Local Docker is still unavailable.
 The ordinary team-match/player-season marts, conservative prior-five-game histories,
 canonical checks/indexes and executable SQL examples are described in
 [SQL_ANALYTICS.md](SQL_ANALYTICS.md). M3 has not started.

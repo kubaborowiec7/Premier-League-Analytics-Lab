@@ -1,0 +1,166 @@
+{
+  "config_sha256": "ac9351ec44221f17c7c325e7cc4085fbec008b5bc674803bb9b0aa22f5b841fa",
+  "config": {
+    "experiment_version": "m5-v1",
+    "competition_id": "EPL",
+    "source_competition_code": "GB1",
+    "season_start_month": 7,
+    "history_start": "2018-07-01",
+    "train_start": "2019-07-01",
+    "validation_start": "2024-07-01",
+    "calibration_start": "2025-01-01",
+    "test_start": "2025-07-01",
+    "test_end": "2026-06-30",
+    "lookback_days": 365,
+    "activity_days": 90,
+    "primary_metric": "mae_eur",
+    "seed": 42,
+    "interval_alpha": 0.1,
+    "interval_scale_floor_eur": 1000000,
+    "sha256": {
+      "games": "142561989017d379bcf9e72bad0b87e0996bae0e7b710ebb3def9255f464c741",
+      "appearances": "e096c2b158fc3d52c4550526c4d4850dd62f31007652f4bcae112eadb1646802",
+      "players": "d22e407981d5b51a79bf8ff59835729f3526f7dc3495a6d8ed2f852ed2e86403",
+      "player_valuations": "608e32e5ad2231074f3505c469ad727be66d7e6efda6af918afd85379439631d"
+    }
+  },
+  "sources": [
+    {
+      "source": "transfermarkt-datasets.games",
+      "sha256": "142561989017d379bcf9e72bad0b87e0996bae0e7b710ebb3def9255f464c741",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/games.csv.gz",
+      "retrieved_at": "2026-09-15T13:01:09.095826+00:00"
+    },
+    {
+      "source": "transfermarkt-datasets.appearances",
+      "sha256": "e096c2b158fc3d52c4550526c4d4850dd62f31007652f4bcae112eadb1646802",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/appearances.csv.gz",
+      "retrieved_at": "2026-09-15T13:01:13.635347+00:00"
+    },
+    {
+      "source": "transfermarkt-datasets.players",
+      "sha256": "d22e407981d5b51a79bf8ff59835729f3526f7dc3495a6d8ed2f852ed2e86403",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/players.csv.gz",
+      "retrieved_at": "2026-09-14T20:58:39.455331+00:00"
+    },
+    {
+      "source": "transfermarkt-datasets.player_valuations",
+      "sha256": "608e32e5ad2231074f3505c469ad727be66d7e6efda6af918afd85379439631d",
+      "url": "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/player_valuations.csv.gz",
+      "retrieved_at": "2026-09-14T20:58:43.032713+00:00"
+    }
+  ],
+  "bundle_sha256": "7fcd647913096391e03a932617691c2adb06163ce6a45be22e3b38c4de8facf2",
+  "chosen": "ridge_eur",
+  "target_mode": "eur",
+  "counts": {
+    "train": 5998,
+    "validation": 552,
+    "calibration": 649
+  },
+  "validation_metrics": {
+    "median": {
+      "n": 552,
+      "mae_eur": 16500498.188405797,
+      "rmse_eur": 26591088.77120385,
+      "median_ae_eur": 10000000.0,
+      "r2": -0.2207406222369468
+    },
+    "persistence": {
+      "n": 552,
+      "mae_eur": 2895561.5942028984,
+      "rmse_eur": 4787457.666214616,
+      "median_ae_eur": 2000000.0,
+      "r2": 0.9604304555575784
+    },
+    "ols_eur": {
+      "n": 552,
+      "mae_eur": 2696276.558599734,
+      "rmse_eur": 4321815.724160335,
+      "median_ae_eur": 1599959.8067737175,
+      "r2": 0.967753421010565
+    },
+    "ridge_eur": {
+      "n": 552,
+      "mae_eur": 2695940.8509267806,
+      "rmse_eur": 4327312.205836442,
+      "median_ae_eur": 1598350.3029514542,
+      "r2": 0.9676713465074249
+    },
+    "lasso_eur": {
+      "n": 552,
+      "mae_eur": 2697664.3293566965,
+      "rmse_eur": 4330843.909415431,
+      "median_ae_eur": 1597257.6398822041,
+      "r2": 0.9676185553948645
+    },
+    "xgb_depth3_eur": {
+      "n": 552,
+      "mae_eur": 3092918.25,
+      "rmse_eur": 7249644.6139788125,
+      "median_ae_eur": 1499424.0,
+      "r2": 0.9092629551887512
+    },
+    "xgb_depth5_eur": {
+      "n": 552,
+      "mae_eur": 3067287.75,
+      "rmse_eur": 7029784.686336844,
+      "median_ae_eur": 1532310.0,
+      "r2": 0.9146831035614014
+    },
+    "ols_log1p": {
+      "n": 552,
+      "mae_eur": 47758770.94434186,
+      "rmse_eur": 568572097.8234879,
+      "median_ae_eur": 6272627.265411302,
+      "r2": -557.1131348418367
+    },
+    "ridge_log1p": {
+      "n": 552,
+      "mae_eur": 47383210.47050238,
+      "rmse_eur": 563001812.3249351,
+      "median_ae_eur": 6288984.48948118,
+      "r2": -546.2310642792149
+    },
+    "lasso_log1p": {
+      "n": 552,
+      "mae_eur": 47532559.95783947,
+      "rmse_eur": 565366519.6723092,
+      "median_ae_eur": 6292240.405690898,
+      "r2": -550.8376530731144
+    },
+    "xgb_depth3_log1p": {
+      "n": 552,
+      "mae_eur": 3076574.75,
+      "rmse_eur": 6356388.2599904165,
+      "median_ae_eur": 1635774.5,
+      "r2": 0.9302455186843872
+    },
+    "xgb_depth5_log1p": {
+      "n": 552,
+      "mae_eur": 2904550.5,
+      "rmse_eur": 5597269.051677255,
+      "median_ae_eur": 1721375.75,
+      "r2": 0.9459116458892822
+    }
+  },
+  "interval_quantile": 0.4746034521894939,
+  "feature_names": [
+    "age_years",
+    "previous_value_eur",
+    "days_since_valuation",
+    "days_since_appearance",
+    "appearances_365",
+    "minutes_365",
+    "goals_per90_365",
+    "assists_per90_365"
+  ],
+  "runtime": {
+    "python": "3.12.14",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "joblib": "1.6.0"
+  }
+}

@@ -372,3 +372,16 @@ For sufficiently rich data, model:
 This is preferred to manually assigning arbitrary league-strength constants.
 
 V1 must not invent league-strength adjustments before multi-league validation data exists.
+
+## Implemented M5 experiment
+
+[VALUE_MODELS.md](VALUE_MODELS.md) fixes the train/validation/calibration/test design,
+direct-EUR and log1p candidate comparison, native TreeSHAP and linear SHAP semantics,
+and scaled residual intervals. The selected model is frozen before final testing.
+Paired MAE comparisons additionally resample complete player histories (2,000 draws,
+seed 42), preserving within-player dependence but not common valuation-date shocks.
+This diagnostic was added after the first final evaluation; it does not change model
+selection or predictions. Model-relative review lists retain exposure and missing-lag
+flags. Low exposure is flagged below 90 minutes; no test rows are removed or metrics
+improved by applying this post-evaluation diagnostic. See the
+[model card](../reports/model_cards/player_value.md) for measured failures and uncertainty.

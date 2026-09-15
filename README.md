@@ -410,6 +410,24 @@ and chart are saved under `artifacts/m4/`; scoped analytical tables go to
 snapshot-position and limited-metric caveats. The initial sample covers 570 players
 and 11,384 appearances. These artifacts are descriptive; no predictor is trained.
 
+## M5 market value models
+
+```bash
+python scripts/train_value_models.py --stage select --download
+python scripts/train_value_models.py --stage final
+python scripts/plot_value_report.py
+```
+
+Selection fits median/persistence, OLS, Ridge, Lasso and XGBoost benchmarks on strictly
+prior observations. Final evaluation uses frozen models on 2025/26. The selected
+Ridge achieved EUR 3.61m MAE versus EUR 3.69m persistence and EUR 17.39m median;
+its high EUR 11.19m RMSE exposes serious low-exposure extrapolation failures.
+These are research artifacts, not a validated transfer-pricing tool. Predictions,
+uncertainty, SHAP, historical review rankings and diagnostics are under `artifacts/m5/`.
+See [reproduction and methodology](docs/VALUE_MODELS.md) and the
+[model card](reports/model_cards/player_value.md). Reproduction requires a fresh
+`--output` directory after selection has been frozen. CI repeats both stages.
+
 ## GitHub philosophy
 
 The GitHub history is part of the portfolio.
@@ -434,9 +452,11 @@ See `docs/GITHUB_WORKFLOW.md`.
 | M2 — PostgreSQL analytics | Implemented; SQL tests and sample coverage verified in CI |
 | M3 — EDA and data quality | Implemented; offline tests and clean-kernel notebook verified |
 | M4 — Advanced player statistics | Implemented; tests and pinned player profile verified |
-| M5–M10 | Not started |
+| M5 — Market value models | Implemented; frozen chronological evaluation and limitations documented |
+| M6–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
-commands; dashboard-ready features, trained models and predictions are not built yet.
+commands. M4/M5 analytical and model artifacts are built explicitly; dashboard
+integration is planned for M8.
 
 The exact first Codex instruction is in `CODEX_START_PROMPT.md`.

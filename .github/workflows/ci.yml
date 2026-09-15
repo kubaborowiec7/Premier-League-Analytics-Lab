@@ -105,3 +105,15 @@ jobs:
             artifacts/m4/profile.json
             artifacts/m4/player_profile.png
             data/processed/m4/*.parquet
+
+      - name: Frozen chronological market-value experiment
+        run: |
+          python scripts/train_value_models.py --stage select --download
+          python scripts/train_value_models.py --stage final
+          python scripts/plot_value_report.py
+
+      - name: Upload market-value evaluation and model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-market-value
+          path: artifacts/m5/

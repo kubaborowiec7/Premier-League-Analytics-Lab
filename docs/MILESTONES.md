@@ -144,7 +144,7 @@ The published appearance adapter and player analytics produce 570 player-season 
 from 11,384 appearances, with a real striker profile, bootstrap intervals and PCA.
 See [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md) for methodology and reproduction.
 Snapshot roles remain historically unverified, and source IDs remain separate from
-Football-Data IDs. M5 has not started.
+Football-Data IDs. M5 uses a separate strictly prior participant cohort.
 
 Deliver:
 - per-90 features,
@@ -167,6 +167,23 @@ Suggested commit:
 ---
 
 ## M5 — Market value model
+
+Implementation status: implemented and evaluated. Tracking issue: #12.
+The experiment manifest and model-selection decision were committed before final
+test evaluation. Ridge EUR was selected using 552 validation observations after
+training on 5,998 rows; 649 separate rows calibrate intervals. On 1,301 final 2025/26
+observations it achieved EUR 3.612m MAE versus EUR 17.390m median and EUR 3.687m
+persistence. The small advantage over persistence is uncertain, and EUR 11.193m RMSE
+reveals serious low-minute extrapolation failures. The model remains a research
+benchmark. See [VALUE_MODELS.md](VALUE_MODELS.md) and the
+[model card](../reports/model_cards/player_value.md) for full metrics and limitations.
+Offline tests cover chronology, future-data invariance, historical joins, fitted
+transforms, interval calibration, SHAP additivity and frozen-stage guards. CI repeats
+selection, final evaluation and report plotting from pinned public archives.
+Local verification: compileall and Ruff passed; 106 tests passed and 13 opt-in
+PostgreSQL tests skipped without a server. Selection, final evaluation and diagnostic
+plot rendering passed against pinned local archives. Low-exposure successor work is
+tracked in #13; M6 has not started.
 
 Deliver:
 - baseline models,

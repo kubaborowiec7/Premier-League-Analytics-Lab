@@ -176,6 +176,12 @@ contracts and metrics. `models/match_experiment.py` freezes a forecasting policy
 evaluates monthly origins before joining outcomes. Full score matrices use compressed
 NumPy arrays with a Parquet row index. CLI/plot scripts never run from app startup.
 See [MATCH_MODELS.md](MATCH_MODELS.md).
+M7 `features/matches.py` generates form/Elo at monthly cutoffs. `models/match_ml.py`
+fits classification pipelines and a disjoint scalar temperature calibrator;
+`models/match_ml_experiment.py` freezes selection/bundle hashes and compares against
+M6 on the same new fixtures. `scripts/train_match_ml.py` and `plot_match_ml.py` are
+explicit commands. Goal distributions remain the responsibility of the statistical
+models, not the H/D/A classifier. See [MATCH_ML.md](MATCH_ML.md).
 Every model run should eventually record:
 - run ID,
 - timestamp,

@@ -1,0 +1,276 @@
+{
+  "chosen": "logistic_c0.1_calibrated",
+  "metrics": {
+    "logistic_c0.1": {
+      "n": 40,
+      "log_loss": 1.0596241919439238,
+      "brier": 0.6411449426307886,
+      "rps": 0.20276358296736485,
+      "accuracy": 0.45
+    },
+    "logistic_c0.1_calibrated": {
+      "n": 40,
+      "log_loss": 1.049078850533594,
+      "brier": 0.6335885702692214,
+      "rps": 0.20069231626471132,
+      "accuracy": 0.45
+    },
+    "logistic_c1": {
+      "n": 40,
+      "log_loss": 1.0596320662877463,
+      "brier": 0.6417548539849506,
+      "rps": 0.20268692822037698,
+      "accuracy": 0.45
+    },
+    "xgb_depth2": {
+      "n": 40,
+      "log_loss": 1.0758827748160482,
+      "brier": 0.646537156133997,
+      "rps": 0.2039144214351017,
+      "accuracy": 0.4
+    },
+    "xgb_depth3": {
+      "n": 40,
+      "log_loss": 1.0762611768476458,
+      "brier": 0.6484906132971668,
+      "rps": 0.2047158352355833,
+      "accuracy": 0.4
+    },
+    "base_rate": {
+      "n": 40,
+      "log_loss": 1.132329506701791,
+      "brier": 0.688931051497355,
+      "rps": 0.22536255888850562,
+      "accuracy": 0.325
+    },
+    "dixon_coles_flat": {
+      "n": 40,
+      "log_loss": 1.0251017966537448,
+      "brier": 0.6129778171940394,
+      "rps": 0.19049491770744242,
+      "accuracy": 0.475,
+      "score_nll": 2.9663575870295555,
+      "goal_mae": 0.9448510339375178,
+      "max_omitted_tail": 2.220446049250313e-16
+    },
+    "dixon_coles_half365": {
+      "n": 40,
+      "log_loss": 1.011528504153988,
+      "brier": 0.6042628622127996,
+      "rps": 0.18726618317009652,
+      "accuracy": 0.45,
+      "score_nll": 2.9374393435529855,
+      "goal_mae": 0.9321302580010755,
+      "max_omitted_tail": 2.220446049250313e-16
+    },
+    "elo_k20": {
+      "n": 40,
+      "log_loss": 1.0770067657610884,
+      "brier": 0.6484297164932291,
+      "rps": 0.20503647863605973,
+      "accuracy": 0.4
+    },
+    "elo_k40": {
+      "n": 40,
+      "log_loss": 1.070423407331144,
+      "brier": 0.6443829897903213,
+      "rps": 0.20319800292547313,
+      "accuracy": 0.4
+    },
+    "poisson_flat": {
+      "n": 40,
+      "log_loss": 1.034959653471845,
+      "brier": 0.6184946917012338,
+      "rps": 0.19142813868663172,
+      "accuracy": 0.475,
+      "score_nll": 2.975540874905289,
+      "goal_mae": 0.9450260396469179,
+      "max_omitted_tail": 3.3306690738754696e-16
+    },
+    "poisson_half365": {
+      "n": 40,
+      "log_loss": 1.0233205200555335,
+      "brier": 0.6108283943916557,
+      "rps": 0.1884339856313388,
+      "accuracy": 0.45,
+      "score_nll": 2.9454228167659275,
+      "goal_mae": 0.9322107010983351,
+      "max_omitted_tail": 2.220446049250313e-16
+    }
+  },
+  "test_matches": 40,
+  "temperature": 1.2572431755797846,
+  "selection_sha256": "2bb1e88cb65016ef60dc005d1663ee34f46c0be8a6a9457fb230bf91aff8a6c3",
+  "first_match_day": "2026-08-21T00:00:00+00:00",
+  "last_match_day": "2026-09-14T00:00:00+00:00",
+  "forecast_months": 2,
+  "config_sha256": "a752e28fbe440e254ac19cc59b86b88a675e9b8a2acae0fbeea26490fdc4fb01",
+  "code_sha256": "ae7dcef98076784e495156e9e0f5efdd5c7ff552fd1470846cd869c14991eb32",
+  "config": {
+    "experiment_version": "m7-v1",
+    "competition_id": "EPL",
+    "competition_name": "Premier League",
+    "country": "England",
+    "source_code": "E0",
+    "timezone": "Europe/London",
+    "seasons": [
+      {
+        "season": "2019/20",
+        "source_season": "1920",
+        "start_date": "2019-07-01",
+        "end_date": "2020-08-01",
+        "sha256": "100037618b94f94057400bb02bf6bac4ef74ddaa58cde4b38370839c39caee61",
+        "expected_matches": 380
+      },
+      {
+        "season": "2020/21",
+        "source_season": "2021",
+        "start_date": "2020-07-01",
+        "end_date": "2021-06-30",
+        "sha256": "5afe63f69401457b8354eaacee24f9a3e520b3c3af6329564a9783e20d789c62",
+        "expected_matches": 380
+      },
+      {
+        "season": "2021/22",
+        "source_season": "2122",
+        "start_date": "2021-07-01",
+        "end_date": "2022-06-30",
+        "sha256": "335afcbabeb2939fa10ab39ba3e8215072d0b577cb8d0705c1e44c56e934e703",
+        "expected_matches": 380
+      },
+      {
+        "season": "2022/23",
+        "source_season": "2223",
+        "start_date": "2022-07-01",
+        "end_date": "2023-06-30",
+        "sha256": "8442792d3b614c94ea3cf381bd2736805889cc1713169035368fff19c3d02380",
+        "expected_matches": 380
+      },
+      {
+        "season": "2023/24",
+        "source_season": "2324",
+        "start_date": "2023-07-01",
+        "end_date": "2024-06-30",
+        "sha256": "b2e057b0ed959f198b0f63d2391c01239f3608e6de5db68edab3f88e04d07ff3",
+        "expected_matches": 380
+      },
+      {
+        "season": "2024/25",
+        "source_season": "2425",
+        "start_date": "2024-07-01",
+        "end_date": "2025-06-30",
+        "sha256": "d0c8ce4a96d886cf60cf101f570f4a3893844226f91c7bd769eb568c49edbfa4",
+        "expected_matches": 380
+      },
+      {
+        "season": "2025/26",
+        "source_season": "2526",
+        "start_date": "2025-07-01",
+        "end_date": "2026-06-30",
+        "sha256": "3e3a8352f9ada6789c508d6ca184424421fed56a30400904a4a327c583407e62",
+        "expected_matches": 380
+      },
+      {
+        "season": "2026/27",
+        "source_season": "2627",
+        "start_date": "2026-07-01",
+        "end_date": "2027-06-30",
+        "sha256": "a5bf08a220af79c2ecd2f3e51fa5f9ea6941c812c3a1f9c49b802c92e11bbd1d",
+        "expected_matches": 40
+      }
+    ],
+    "validation_start": "2024-07-01",
+    "test_start": "2026-07-01",
+    "test_end": "2026-09-15",
+    "lookback_days": 1095,
+    "min_train_matches": 500,
+    "min_feature_matches": 100,
+    "primary_metric": "log_loss",
+    "elo_k": [
+      20,
+      40
+    ],
+    "elo_home_advantage": 60,
+    "elo_season_retention": 0.75,
+    "half_lives": [
+      null,
+      365
+    ],
+    "goal_penalty": 0.01,
+    "max_rate": 8,
+    "max_goals": 30,
+    "rho_bounds": [
+      -0.12,
+      0.015
+    ],
+    "seed": 42,
+    "train_start": "2020-08-01",
+    "calibration_start": "2025-07-01",
+    "feature_elo_k": 20,
+    "rolling_matches": 5,
+    "logistic_c": [
+      0.1,
+      1.0
+    ],
+    "xgb_depths": [
+      2,
+      3
+    ],
+    "xgb_estimators": 200,
+    "xgb_learning_rate": 0.03,
+    "temperature_bounds": [
+      0.5,
+      5.0
+    ]
+  },
+  "sources": [
+    {
+      "season": "2019/20",
+      "sha256": "100037618b94f94057400bb02bf6bac4ef74ddaa58cde4b38370839c39caee61",
+      "url": "https://football-data.co.uk/mmz4281/1920/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:20.144046+00:00"
+    },
+    {
+      "season": "2020/21",
+      "sha256": "5afe63f69401457b8354eaacee24f9a3e520b3c3af6329564a9783e20d789c62",
+      "url": "https://football-data.co.uk/mmz4281/2021/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:20.704213+00:00"
+    },
+    {
+      "season": "2021/22",
+      "sha256": "335afcbabeb2939fa10ab39ba3e8215072d0b577cb8d0705c1e44c56e934e703",
+      "url": "https://football-data.co.uk/mmz4281/2122/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:21.281530+00:00"
+    },
+    {
+      "season": "2022/23",
+      "sha256": "8442792d3b614c94ea3cf381bd2736805889cc1713169035368fff19c3d02380",
+      "url": "https://football-data.co.uk/mmz4281/2223/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:21.862860+00:00"
+    },
+    {
+      "season": "2023/24",
+      "sha256": "b2e057b0ed959f198b0f63d2391c01239f3608e6de5db68edab3f88e04d07ff3",
+      "url": "https://football-data.co.uk/mmz4281/2324/E0.csv",
+      "retrieved_at": "2026-09-14T20:58:34.386980+00:00"
+    },
+    {
+      "season": "2024/25",
+      "sha256": "d0c8ce4a96d886cf60cf101f570f4a3893844226f91c7bd769eb568c49edbfa4",
+      "url": "https://football-data.co.uk/mmz4281/2425/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:22.450446+00:00"
+    },
+    {
+      "season": "2025/26",
+      "sha256": "3e3a8352f9ada6789c508d6ca184424421fed56a30400904a4a327c583407e62",
+      "url": "https://football-data.co.uk/mmz4281/2526/E0.csv",
+      "retrieved_at": "2026-09-15T18:30:23.029014+00:00"
+    },
+    {
+      "season": "2026/27",
+      "sha256": "a5bf08a220af79c2ecd2f3e51fa5f9ea6941c812c3a1f9c49b802c92e11bbd1d",
+      "url": "https://football-data.co.uk/mmz4281/2627/E0.csv",
+      "retrieved_at": "2026-09-15T23:08:05.048402+00:00"
+    }
+  ]
+}

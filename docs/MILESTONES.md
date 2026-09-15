@@ -217,6 +217,8 @@ Local compileall/Ruff passed; 125 tests passed, 13 PostgreSQL tests skipped with
 server. Both pinned stages and plot generation passed. CI repeats all stages.
 See [MATCH_MODELS.md](MATCH_MODELS.md) and the
 [model card](../reports/model_cards/match_statistics.md).
+Full CI, including real PostgreSQL and M6 reproduction, passed on `610a415`:
+https://github.com/kubaborowiec7/Premier-League-Analytics-Lab/actions/runs/35034971888.
 
 Deliver:
 - Elo,
@@ -238,6 +240,18 @@ Suggested commit:
 ---
 
 ## M7 — Match ML model
+
+Implementation status: implemented and evaluated; tracking issue #18. Monthly past-only
+features train logistic/XGBoost candidates on 1,520 matches, select on 380, calibrate
+on another 380 and evaluate 40 new 2026/27 matches. Calibrated logistic achieved
+log loss 1.0491, compared with base rate 1.1323 and Dixon–Coles 1.0115 on the same
+fixtures. The limited pilot does not establish robust superiority or calibration.
+See [MATCH_ML.md](MATCH_ML.md) and its [model card](../reports/model_cards/match_ml.md).
+Tests cover shifted features, fitted-transform isolation and frozen stage boundaries;
+CI reproduces both stages and the aligned statistical comparison.
+Local verification: compileall and Ruff passed; 130 tests passed, with 13 PostgreSQL
+tests skipped without a local server. Pinned selection, final evaluation and plotting
+passed. The current-season archive is retained locally because its provider URL is mutable.
 
 Deliver:
 - leakage-safe rolling features,

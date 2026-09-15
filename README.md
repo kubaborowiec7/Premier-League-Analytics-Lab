@@ -444,6 +444,22 @@ and the [model card](reports/model_cards/match_statistics.md) for constraints, u
 and the tiny difference from Poisson. These are historical forecasts; no live fixture
 service or match UI is added in M6. Use a fresh `--output` directory for reproduction.
 
+## M7 calibrated match ML
+
+```bash
+python scripts/train_match_ml.py --stage select --download
+python scripts/train_match_ml.py --stage final --download
+python scripts/plot_match_ml.py
+```
+
+Past-only Elo/form features feed logistic and XGBoost classifiers, with a separate
+temperature-calibration season. A new 40-match 2026/27 snapshot is the final pilot.
+Selected calibrated logistic log loss is 1.0491 versus base rate 1.1323 and Dixon–Coles
+1.0115 on identical fixtures. ML does not outperform the statistical benchmark here;
+the small sample limits conclusions. See [methodology](docs/MATCH_ML.md) and the
+[model card](reports/model_cards/match_ml.md). Preserve the pinned current-season
+archive: its public download URL changes as new results arrive.
+
 ## GitHub philosophy
 
 The GitHub history is part of the portfolio.
@@ -470,7 +486,8 @@ See `docs/GITHUB_WORKFLOW.md`.
 | M4 — Advanced player statistics | Implemented; tests and pinned player profile verified |
 | M5 — Market value models | Implemented; frozen chronological evaluation and limitations documented |
 | M6 — Statistical match models | Implemented; rolling evaluation and score distributions verified |
-| M7–M10 | Not started |
+| M7 — Calibrated match ML | Implemented; separate calibration and 40-match final pilot evaluated |
+| M8–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
 commands. M4/M5 analytical and model artifacts are built explicitly; dashboard

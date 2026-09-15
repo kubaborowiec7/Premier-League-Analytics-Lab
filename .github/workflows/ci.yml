@@ -129,3 +129,15 @@ jobs:
         with:
           name: m6-match-models
           path: artifacts/m6/
+
+      - name: Calibrated match classifiers and aligned benchmarks
+        run: |
+          python scripts/train_match_ml.py --stage select --download
+          python scripts/train_match_ml.py --stage final --download
+          python scripts/plot_match_ml.py
+
+      - name: Upload calibrated match ML artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: m7-match-ml
+          path: artifacts/m7/

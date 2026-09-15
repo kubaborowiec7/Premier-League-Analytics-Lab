@@ -13,6 +13,13 @@ and [MATCH_MODELS.md](MATCH_MODELS.md) for exact formulas, constraints, split co
 and measured reports. M6 distinguishes predicted goal rates from event-data xG,
 reports omitted score-grid mass, and evaluates log loss, Brier, RPS and reliability.
 
+M7 implements multinomial logistic/XGBoost with training-only preprocessing and
+disjoint temperature calibration. Monthly information cutoffs match M6; the new
+2026/27 final pilot contains only 40 matches. See [MATCH_ML.md](MATCH_ML.md) for exact
+features, splits and calibration semantics. The observed ML result is weaker than
+the statistical goal-model benchmark; model complexity is not treated as progress
+unless measured performance supports it.
+
 ## 1. Player metrics
 
 ### Per-90 normalization

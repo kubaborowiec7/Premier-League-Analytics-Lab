@@ -1,0 +1,117 @@
+{
+  "experiment_version": "m7-v1",
+  "competition_id": "EPL",
+  "competition_name": "Premier League",
+  "country": "England",
+  "source_code": "E0",
+  "timezone": "Europe/London",
+  "seasons": [
+    {
+      "season": "2019/20",
+      "source_season": "1920",
+      "start_date": "2019-07-01",
+      "end_date": "2020-08-01",
+      "sha256": "100037618b94f94057400bb02bf6bac4ef74ddaa58cde4b38370839c39caee61",
+      "expected_matches": 380
+    },
+    {
+      "season": "2020/21",
+      "source_season": "2021",
+      "start_date": "2020-07-01",
+      "end_date": "2021-06-30",
+      "sha256": "5afe63f69401457b8354eaacee24f9a3e520b3c3af6329564a9783e20d789c62",
+      "expected_matches": 380
+    },
+    {
+      "season": "2021/22",
+      "source_season": "2122",
+      "start_date": "2021-07-01",
+      "end_date": "2022-06-30",
+      "sha256": "335afcbabeb2939fa10ab39ba3e8215072d0b577cb8d0705c1e44c56e934e703",
+      "expected_matches": 380
+    },
+    {
+      "season": "2022/23",
+      "source_season": "2223",
+      "start_date": "2022-07-01",
+      "end_date": "2023-06-30",
+      "sha256": "8442792d3b614c94ea3cf381bd2736805889cc1713169035368fff19c3d02380",
+      "expected_matches": 380
+    },
+    {
+      "season": "2023/24",
+      "source_season": "2324",
+      "start_date": "2023-07-01",
+      "end_date": "2024-06-30",
+      "sha256": "b2e057b0ed959f198b0f63d2391c01239f3608e6de5db68edab3f88e04d07ff3",
+      "expected_matches": 380
+    },
+    {
+      "season": "2024/25",
+      "source_season": "2425",
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "sha256": "d0c8ce4a96d886cf60cf101f570f4a3893844226f91c7bd769eb568c49edbfa4",
+      "expected_matches": 380
+    },
+    {
+      "season": "2025/26",
+      "source_season": "2526",
+      "start_date": "2025-07-01",
+      "end_date": "2026-06-30",
+      "sha256": "3e3a8352f9ada6789c508d6ca184424421fed56a30400904a4a327c583407e62",
+      "expected_matches": 380
+    },
+    {
+      "season": "2026/27",
+      "source_season": "2627",
+      "start_date": "2026-07-01",
+      "end_date": "2027-06-30",
+      "sha256": "a5bf08a220af79c2ecd2f3e51fa5f9ea6941c812c3a1f9c49b802c92e11bbd1d",
+      "expected_matches": 40
+    }
+  ],
+  "validation_start": "2024-07-01",
+  "test_start": "2026-07-01",
+  "test_end": "2026-09-15",
+  "lookback_days": 1095,
+  "min_train_matches": 500,
+  "min_feature_matches": 100,
+  "primary_metric": "log_loss",
+  "elo_k": [
+    20,
+    40
+  ],
+  "elo_home_advantage": 60,
+  "elo_season_retention": 0.75,
+  "half_lives": [
+    null,
+    365
+  ],
+  "goal_penalty": 0.01,
+  "max_rate": 8,
+  "max_goals": 30,
+  "rho_bounds": [
+    -0.12,
+    0.015
+  ],
+  "seed": 42,
+  "train_start": "2020-08-01",
+  "calibration_start": "2025-07-01",
+  "feature_elo_k": 20,
+  "rolling_matches": 5,
+  "logistic_c": [
+    0.1,
+    1.0
+  ],
+  "xgb_depths": [
+    2,
+    3
+  ],
+  "xgb_estimators": 200,
+  "xgb_learning_rate": 0.03,
+  "temperature_bounds": [
+    0.5,
+    5.0
+  ]
+}

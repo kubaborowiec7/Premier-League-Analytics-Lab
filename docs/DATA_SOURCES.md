@@ -47,6 +47,14 @@ explicit result-only parsing and continues to validate teams, dates and scores.
 The default ingestion path remains strict and raw archives are unchanged. See
 [MATCH_MODELS.md](MATCH_MODELS.md) for acquisition and refresh commands.
 
+M7 adds a pinned partial 2026/27 Football-Data `E0` archive: 40 matches dated
+2026-08-21–2026-09-14, test cutoff 2026-09-15. The exact hash is recorded in
+`data/manifests/m7_experiment.json`. Only row count/date coverage was inspected before
+selection; outcomes were reserved for final evaluation. The active-season URL is
+mutable, so a fresh download may fail its pin after new results arrive. Preserve the
+immutable local archive; any refresh creates a new manifest/experiment. No raw dataset
+is committed. [MATCH_ML.md](MATCH_ML.md) explains the chronological windows and refresh.
+
 ## 2. Transfermarkt dataset snapshot — valuation core source
 
 Recommended published dataset:

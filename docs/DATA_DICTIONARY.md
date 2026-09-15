@@ -1,5 +1,23 @@
 # Data dictionary
 
+## M2 analytical views
+
+See [SQL_ANALYTICS.md](SQL_ANALYTICS.md) for the complete analytical contracts and
+temporal policy. All views preserve competition and season scope.
+
+| View | Grain | Principal derived fields |
+|---|---|---|
+| `mart_team_match` | match + club | opponent, home flag, observed goals/shots, 0/1/3 points |
+| `mart_team_prematch` | match + club | history cutoff/count/latest date, prior-five means for points and goals |
+| `mart_player_season_performance` | player + competition + season | appearances, recorded club count, complete totals, missing-minutes count context |
+| `mart_player_season_value` | player + competition + season + source | valuation count/date range, latest/min/max value, source context labels |
+| `mart_player_season` | player + competition + season | performance availability/totals and valuation coverage across sources |
+
+M2 migration validates match scope/clubs, finished scores and nonnegative statistics;
+valuation competition and season must be present. Legacy unscoped rows cause an explicit
+migration failure. Unknown statistics remain nullable. The bootstrap plus numbered
+migrations are the canonical schema; `schema.sql` alone is not the full installation.
+
 This file starts as a canonical target schema. Update it whenever ingestion changes.
 
 ## competitions

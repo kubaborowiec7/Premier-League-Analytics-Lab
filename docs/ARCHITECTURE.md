@@ -126,14 +126,20 @@ a bounded connection attempt, `SELECT 1`, and disposal of the engine. Importing
 modules and starting the Streamlit landing page require no database connection.
 Connection errors are reported without logging raw driver messages or credentials.
 Docker Compose initializes the existing schema in dependency order on an empty volume;
-the M1 migration below extends it. Analytical SQL remains later-milestone work.
+the M1 and M2 migrations extend it, followed by the M2 analytical views.
 
 M1 now adds an explicit additive ingestion migration and these data modules:
 `snapshots.py` (immutable acquisition/checksums), `contracts.py` (batch/scope validation),
 `football_data.py` and `transfermarkt.py` (source adapters), `repository.py` (atomic
 PostgreSQL persistence and lineage), and `cli.py` (explicit orchestration).
 See [INGESTION.md](INGESTION.md) for refresh, replay and failure behavior. Analytical
-SQL remains M2 work. No ingestion or model training is performed by app startup.
+SQL is implemented in M2. No ingestion or model training is performed by app startup.
+
+M2's `data/analytics.py` explicitly installs repository SQL and validates invariants
+inside a transaction. `sql/analytics.sql` defines ordinary team-match and player-season
+views, including a separate pre-match view with a conservative timestamp cutoff.
+`scripts/verify_analytics.py` reports coverage without downloading sources. Retrospective
+views are not model-ready historical feature tables. See [SQL_ANALYTICS.md](SQL_ANALYTICS.md).
 
 ---
 

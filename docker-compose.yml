@@ -11,6 +11,8 @@ services:
       - pl_analytics_pgdata:/var/lib/postgresql/data
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
       - ./sql/migrations/001_ingestion.sql:/docker-entrypoint-initdb.d/002-ingestion.sql:ro
+      - ./sql/migrations/002_analytics.sql:/docker-entrypoint-initdb.d/003-analytics-constraints.sql:ro
+      - ./sql/analytics.sql:/docker-entrypoint-initdb.d/004-analytics-views.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s

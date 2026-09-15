@@ -208,6 +208,16 @@ Suggested commit:
 
 ## M6 — Match statistical models
 
+Implementation status: implemented and evaluated; tracking issue #15. Fixed monthly
+origins compare seven models on 760 development matches and 380 final 2025/26 matches.
+Time-weighted Dixon–Coles was selected before final evaluation: log loss 1.0263 versus
+base rate 1.0844. Its difference from Poisson is very small. Score matrices normalize
+to one; tests cover temporal isolation, known metrics and numerical likelihood gradients.
+Local compileall/Ruff passed; 125 tests passed, 13 PostgreSQL tests skipped without a
+server. Both pinned stages and plot generation passed. CI repeats all stages.
+See [MATCH_MODELS.md](MATCH_MODELS.md) and the
+[model card](../reports/model_cards/match_statistics.md).
+
 Deliver:
 - Elo,
 - independent Poisson,

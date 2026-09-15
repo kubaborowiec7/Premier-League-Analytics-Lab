@@ -48,8 +48,14 @@ def _club_id(name: str, country: str) -> str:
     return f"fd:club:{digest}"
 
 
-def parse_results(snapshot: Snapshot, scope: Scope, *, timezone: str) -> Batch:
-    """Validate a league season, retain UTC timestamps and flag unknown kickoff times."""
+def parse_results(
+    snapshot: Snapshot, scope: Scope, *, timezone: str, include_shots: bool = True
+) -> Batch:
+    """Validate results; optionally exclude all shot fields for result-only models.
+
+    The default ingestion path validates every included statistic. Opting out of
+    shots never changes raw data or weakens date, team, score or result validation.
+    """
     snapshot.verify()
     zone = ZoneInfo(timezone)
     required = {"Div", "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"}
@@ -102,7 +108,11 @@ def parse_results(snapshot: Snapshot, scope: Scope, *, timezone: str) -> Batch:
                 ("HST", "home_shots_on_target"),
                 ("AST", "away_shots_on_target"),
             ):
-                record[target] = integer(row.get(source_column, ""), source_column, optional=True)
+                record[target] = (
+                    integer(row.get(source_column, ""), source_column, optional=True)
+                    if include_shots
+                    else None
+                )
             for side in ("home", "away"):
                 shots, on_target = record[f"{side}_shots"], record[f"{side}_shots_on_target"]
                 if shots is not None and on_target is not None and on_target > shots:

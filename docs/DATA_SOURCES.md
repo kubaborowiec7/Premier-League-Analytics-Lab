@@ -38,6 +38,15 @@ They can be used later as a benchmark for predictive information/calibration.
 
 ---
 
+M6 extends the existing Football-Data path to seven pinned `E0` seasons from 2019/20
+through 2025/26. Hashes and season coverage are in `data/manifests/m6_experiment.json`;
+2019/20 permits the COVID-delayed July 2020 finish. Competition/country/timezone are
+configured, not inferred in model code. The 2021/22 Newcastle–West Ham row (15 August
+2021) contains eight away shots but nine on target. M6 excludes all shot fields through
+explicit result-only parsing and continues to validate teams, dates and scores.
+The default ingestion path remains strict and raw archives are unchanged. See
+[MATCH_MODELS.md](MATCH_MODELS.md) for acquisition and refresh commands.
+
 ## 2. Transfermarkt dataset snapshot — valuation core source
 
 Recommended published dataset:

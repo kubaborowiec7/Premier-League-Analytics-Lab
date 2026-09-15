@@ -169,6 +169,13 @@ evaluation. `scripts/train_value_models.py` is the explicit CLI and
 `scripts/plot_value_report.py` renders existing outputs. See [VALUE_MODELS.md](VALUE_MODELS.md).
 No changes to the canonical database or app-startup behavior are required.
 
+M6 reuses the canonical Football-Data adapter through `data/match_history.py`, with
+an explicit result-only mode excluding unused shot statistics. `models/match_statistical.py`
+fits scoped Elo and penalized goal models; `statistics/matches.py` supplies probability
+contracts and metrics. `models/match_experiment.py` freezes a forecasting policy and
+evaluates monthly origins before joining outcomes. Full score matrices use compressed
+NumPy arrays with a Parquet row index. CLI/plot scripts never run from app startup.
+See [MATCH_MODELS.md](MATCH_MODELS.md).
 Every model run should eventually record:
 - run ID,
 - timestamp,

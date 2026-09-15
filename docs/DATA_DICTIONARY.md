@@ -200,3 +200,15 @@ marts and make no valuation-date club-membership claim.
 Undefined exposure/rates/lag values remain missing until training-fitted preprocessing.
 Names are display metadata and never predictors. Ranking keeps only the latest final
 test observation per player/competition; valuation dates must remain visible.
+
+## M6 match forecast artifacts
+
+Grain: `match_id`, `competition_id`, `season`, `origin`, `model`. `match_day` is the
+source-local calendar date represented as UTC midnight; `training_end_day < origin`.
+`p_home`, `p_draw`, `p_away` sum to one in H/D/A order. Goal models additionally expose
+`expected_home_goals`, `expected_away_goals`, `rho`, `omitted_tail` and the most likely
+score. Elo exposes frozen `home_elo`, `away_elo`; `unseen_team` flags neutral fallbacks.
+Observed `home_goals`/`away_goals` join only after forecasting. Base-rate/Elo rows have
+no invented expected goals or score grid. Each NPZ matrix row aligns with its Parquet
+index row; axes are home goals then away goals, indexed 0–30. These are artifact-based
+forecasts, not SQL records or live fixture predictions.

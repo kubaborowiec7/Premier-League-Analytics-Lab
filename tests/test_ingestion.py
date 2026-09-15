@@ -191,6 +191,20 @@ def test_bad_results_fail_before_loading(
         parse_results(snapshot, scope, timezone="Europe/London")
 
 
+def test_result_only_mode_excludes_all_shots_but_validates_scores(
+    tmp_path: Path, scope: Scope
+) -> None:
+    snapshot = archive(tmp_path, "matches.csv", changed_csv("matches.csv", {"HST": "20"}))
+    batch = parse_results(snapshot, scope, timezone="Europe/London", include_shots=False)
+    assert all(
+        row["home_shots"] is None and row["home_shots_on_target"] is None
+        for row in batch.tables["matches"]
+    )
+    invalid = archive(tmp_path, "matches.csv", changed_csv("matches.csv", {"FTR": "A"}))
+    with pytest.raises(DataValidationError):
+        parse_results(invalid, scope, timezone="Europe/London", include_shots=False)
+
+
 def test_source_mapping_is_generic(tmp_path: Path, scope: Scope) -> None:
     text = (FIXTURES / "matches.csv").read_text().replace("E0,", "X1,")
     snapshot = archive(tmp_path, "matches.csv", text)

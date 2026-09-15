@@ -212,3 +212,15 @@ Observed `home_goals`/`away_goals` join only after forecasting. Base-rate/Elo ro
 no invented expected goals or score grid. Each NPZ matrix row aligns with its Parquet
 index row; axes are home goals then away goals, indexed 0–30. These are artifact-based
 forecasts, not SQL records or live fixture predictions.
+
+## M7 match classifier artifacts
+
+Grain: match/competition/season/origin; `feature_history_end < origin <= match_day`.
+`elo_difference` is home-minus-away Elo before the origin. For each side,
+`points_recent`, `goals_for_recent`, `goals_against_recent` are averages over at most
+five prior observed games; `recent_matches` records their count and
+`days_since_result` is origin minus last observed result day. Unknown history has
+missing averages and zero count. Only these eleven features enter classifiers.
+Observed scores are label metadata joined after feature creation. Prediction rows
+retain H/D/A probabilities and the model/temperature variant. ML variants do not
+provide goal rates; aligned M6 rows retain their original score-model columns.

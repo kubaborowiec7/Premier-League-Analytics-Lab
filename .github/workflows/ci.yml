@@ -93,3 +93,15 @@ jobs:
             artifacts/m3-quality.json
             artifacts/m3-executed.ipynb
             artifacts/m3/*.png
+
+      - name: Pinned player analytics and reproducible profile
+        run: python scripts/build_player_analytics.py --download
+
+      - name: Upload player profile and statistical artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-player-analytics
+          path: |
+            artifacts/m4/profile.json
+            artifacts/m4/player_profile.png
+            data/processed/m4/*.parquet

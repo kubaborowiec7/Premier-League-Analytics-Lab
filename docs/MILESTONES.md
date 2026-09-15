@@ -113,7 +113,7 @@ the offline notebook execution after validating M1 ingestion and M2 SQL.
 The pinned-sample notebook, offline report generator, synthetic tests and leakage
 audit are described in [DATA_QUALITY.md](DATA_QUALITY.md). Data blockers are tracked
 in #6 (appearances/identity), #7 (historical membership) and #8 (history/holdouts).
-M4 has not started.
+M4 now adds a separate pinned appearance-data path; the M3 findings concern M1 data.
 
 Deliver:
 - reproducible EDA notebook,
@@ -135,6 +135,16 @@ Suggested commit:
 ---
 
 ## M4 — Advanced player statistics
+
+Implementation status: complete. Tracking issue: #10.
+Local compileall and Ruff passed; 88 tests passed and 13 PostgreSQL tests skipped
+without a server. The pinned appearance pipeline produced the expected counts and
+real player profile. CI repeats this build after the M1–M3 checks.
+The published appearance adapter and player analytics produce 570 player-season rows
+from 11,384 appearances, with a real striker profile, bootstrap intervals and PCA.
+See [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md) for methodology and reproduction.
+Snapshot roles remain historically unverified, and source IDs remain separate from
+Football-Data IDs. M5 has not started.
 
 Deliver:
 - per-90 features,

@@ -3,6 +3,12 @@
 The core project should remain reproducible and should not depend on fragile web scraping.
 
 M1 implementation and refresh commands: [INGESTION.md](INGESTION.md).
+M4 extends the same published CSV mirror with `games.csv.gz` and `appearances.csv.gz`.
+Hashes, scope and expected counts are pinned in `data/manifests/m4_sources.json`;
+acquisition uses the existing immutable snapshot store. It joins appearances to game
+participants through source IDs and does not infer cross-source club aliases. Profile
+sub-positions remain explicitly historically unverified. Acquisition, output schemas
+and reproduction are described in [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md).
 The pinned sample manifest is `data/manifests/m1_sources.json`; acquisition timestamps
 and source URLs are retained in raw sidecars and PostgreSQL provenance records.
 

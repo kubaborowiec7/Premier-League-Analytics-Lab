@@ -432,7 +432,7 @@ See [reproduction and methodology](docs/VALUE_MODELS.md) and the
 
 ```bash
 python scripts/train_match_models.py --stage select --download
-python scripts/train_match_models.py --stage final
+python scripts/train_match_models.py --stage final --download
 python scripts/plot_match_report.py
 ```
 

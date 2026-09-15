@@ -45,7 +45,7 @@ The sample includes 380 matches, 948 player profiles and 2,093 source-reported E
 valuations. Batch replay and provenance were verified against a real PostgreSQL service.
 Local Docker remains unavailable; local raw-file validation is reproducible offline.
 The optional API client is deferred. Tracking issue: #1; implementation PR: #2.
-M2 has not started.
+M2 builds on these canonical records without acquiring another dataset.
 
 Deliver:
 - competition-parameterized Football-Data.co.uk downloader (EPL enabled in V1),
@@ -69,6 +69,11 @@ Suggested commits:
 ---
 
 ## M2 — PostgreSQL analytics layer
+
+Implementation status: implemented; verification in progress. Tracking issue: #3.
+The ordinary team-match/player-season marts, conservative prior-five-game histories,
+canonical checks/indexes and executable SQL examples are described in
+[SQL_ANALYTICS.md](SQL_ANALYTICS.md). M3 has not started.
 
 Deliver:
 - finalized canonical schema,

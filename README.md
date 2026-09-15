@@ -338,6 +338,7 @@ not schema contents or readiness of analytics artifacts.
 CI installs the package on Python 3.12, validates Compose, compiles `src`, and runs
 Ruff and the offline test suite, including Streamlit's app test runner. It also runs
 PostgreSQL 16 integration tests and the pinned M1 public-data ingestion/replay check.
+M2 SQL installation, repeatability and analytical coverage are also checked in CI.
 
 ## M1 data ingestion
 
@@ -363,6 +364,21 @@ Historical competition membership in the valuation source is not fully verified;
 reported club context is preserved separately and is not a valid historical feature.
 Raw datasets, local reports and credentials are not committed.
 
+## M2 SQL analytics
+
+After loading M1, install and check the analytical views:
+
+```bash
+python scripts/verify_analytics.py --install --manifest data/manifests/m1_sources.json
+```
+
+The views expose observed team-match results, conservative pre-match histories,
+player-season performance and valuation summaries. The current sample has no player
+appearances: performance remains missing for its 948 valuation-only players.
+Season summaries are retrospective, not valid inputs for earlier predictions.
+See [SQL analytics](docs/SQL_ANALYTICS.md) for table grains, temporal cutoffs, upgrades,
+advanced SQL examples and verification. No new data is downloaded by this command.
+
 ---
 
 ## GitHub philosophy
@@ -386,7 +402,8 @@ See `docs/GITHUB_WORKFLOW.md`.
 |---|---|
 | M0 — Repository foundation | Implemented |
 | M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
-| M2–M10 | Not started |
+| M2 — PostgreSQL analytics | Implemented; verification in progress |
+| M3–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
 commands; dashboard-ready features, trained models and predictions are not built yet.

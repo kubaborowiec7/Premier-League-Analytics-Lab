@@ -38,6 +38,7 @@ socket.create_connection = fail
 import pl_analytics
 import pl_analytics.config
 import pl_analytics.data.database
+import pl_analytics.data.analytics
 """
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=30, check=False

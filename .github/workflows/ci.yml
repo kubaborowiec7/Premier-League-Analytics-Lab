@@ -54,7 +54,7 @@ jobs:
       - name: PostgreSQL integration tests
         env:
           TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pl_analytics
-        run: pytest tests/test_postgres_ingestion.py
+        run: pytest tests/test_postgres_ingestion.py tests/test_postgres_analytics.py
 
       - name: Pinned public-data ingestion and replay
         env:
@@ -66,3 +66,16 @@ jobs:
         with:
           name: m1-ingestion-verification
           path: artifacts/m1-verification.json
+
+      - name: PostgreSQL analytics installation, replay and coverage
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pl_analytics
+        run: |
+          python scripts/verify_analytics.py --install --manifest data/manifests/m1_sources.json
+          python scripts/verify_analytics.py --install --manifest data/manifests/m1_sources.json
+
+      - name: Upload analytics verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-analytics-verification
+          path: artifacts/m2-verification.json

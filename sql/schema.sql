@@ -134,15 +134,7 @@ CREATE TABLE IF NOT EXISTS model_runs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Example leakage-safe rolling match feature pattern:
--- Current match is excluded because the window ends at 1 PRECEDING.
---
--- SELECT
---     club_id,
---     match_date,
---     AVG(points) OVER (
---         PARTITION BY club_id
---         ORDER BY match_date
---         ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING
---     ) AS points_last_5
--- FROM team_match_long;
+-- Apply migrations/001_ingestion.sql, migrations/002_analytics.sql and analytics.sql
+-- after this bootstrap. See docs/SQL_ANALYTICS.md for upgrade and validation commands.
+-- A ROWS ... 1 PRECEDING frame alone is unsafe for tied/unknown kickoffs;
+-- mart_team_prematch uses an explicit strict, conservative history cutoff instead.

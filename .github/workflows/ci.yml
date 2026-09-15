@@ -117,3 +117,15 @@ jobs:
         with:
           name: m5-market-value
           path: artifacts/m5/
+
+      - name: Rolling-origin statistical match models
+        run: |
+          python scripts/train_match_models.py --stage select --download
+          python scripts/train_match_models.py --stage final
+          python scripts/plot_match_report.py
+
+      - name: Upload match probabilities and evaluation
+        uses: actions/upload-artifact@v4
+        with:
+          name: m6-match-models
+          path: artifacts/m6/

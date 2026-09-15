@@ -8,6 +8,11 @@ contracts are documented in [PLAYER_ANALYTICS.md](PLAYER_ANALYTICS.md), with a m
 example and source limitations. Snapshot position context is descriptive, not a
 verified historical role. Modelling sections remain specifications for later milestones.
 
+M5 and M6 now implement their modelling subsets: see [VALUE_MODELS.md](VALUE_MODELS.md)
+and [MATCH_MODELS.md](MATCH_MODELS.md) for exact formulas, constraints, split contracts
+and measured reports. M6 distinguishes predicted goal rates from event-data xG,
+reports omitted score-grid mass, and evaluates log loss, Brier, RPS and reliability.
+
 ## 1. Player metrics
 
 ### Per-90 normalization

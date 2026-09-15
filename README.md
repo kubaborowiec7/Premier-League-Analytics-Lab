@@ -428,6 +428,22 @@ See [reproduction and methodology](docs/VALUE_MODELS.md) and the
 [model card](reports/model_cards/player_value.md). Reproduction requires a fresh
 `--output` directory after selection has been frozen. CI repeats both stages.
 
+## M6 statistical match forecasts
+
+```bash
+python scripts/train_match_models.py --stage select --download
+python scripts/train_match_models.py --stage final
+python scripts/plot_match_report.py
+```
+
+Seven fixed base-rate/Elo/Poisson/Dixon–Coles benchmarks use monthly rolling origins.
+The selected time-weighted Dixon–Coles policy achieved 1.0263 log loss on 380 final
+2025/26 matches versus 1.0844 for base rates. Score matrices, calibration diagnostics
+and fitted models remain under `artifacts/m6/`. See [methodology](docs/MATCH_MODELS.md)
+and the [model card](reports/model_cards/match_statistics.md) for constraints, uncertainty
+and the tiny difference from Poisson. These are historical forecasts; no live fixture
+service or match UI is added in M6. Use a fresh `--output` directory for reproduction.
+
 ## GitHub philosophy
 
 The GitHub history is part of the portfolio.
@@ -453,7 +469,8 @@ See `docs/GITHUB_WORKFLOW.md`.
 | M3 — EDA and data quality | Implemented; offline tests and clean-kernel notebook verified |
 | M4 — Advanced player statistics | Implemented; tests and pinned player profile verified |
 | M5 — Market value models | Implemented; frozen chronological evaluation and limitations documented |
-| M6–M10 | Not started |
+| M6 — Statistical match models | Implemented; rolling evaluation and score distributions verified |
+| M7–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI
 commands. M4/M5 analytical and model artifacts are built explicitly; dashboard

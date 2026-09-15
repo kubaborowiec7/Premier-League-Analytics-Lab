@@ -157,6 +157,17 @@ For the first implementation:
 
 ## Provenance record
 
+M5 reuses the published `games`, `appearances`, `players` and `player_valuations`
+archives pinned in `data/manifests/m5_experiment.json`; it adds no scraper or source.
+Game/appearance facts from 2018-07-01 provide strictly prior competition participation;
+valuation history supplies lagged values and dated targets through 2026-06-30.
+Selection exposes targets only through 2025-06-30, with 2025/26 reserved for final
+evaluation. Current-club and valuation-league snapshot fields are ignored. The cohort
+is recent prior participants, not confirmed valuation-date league membership.
+Original publication times/revision vintages are unavailable. Local snapshot metadata
+retains retrieval dates, published URLs and existing licence/terms notes; the selected
+run records source hashes and URLs. See [VALUE_MODELS.md](VALUE_MODELS.md) for refresh.
+
 For every raw dataset store a metadata record with:
 
 - `source_name`

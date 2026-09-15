@@ -12,6 +12,7 @@ From the repository root after installing `.[dev]`:
 ```bash
 python scripts/train_value_models.py --stage select --download
 python scripts/train_value_models.py --stage final
+python scripts/plot_value_report.py
 ```
 
 The first command acquires only pinned published archives if absent. Omit `--download`
@@ -102,10 +103,16 @@ All bulky outputs remain ignored under the selected artifact directory:
   this is a historical review list, not a current simultaneous scouting shortlist.
 - `shap_<model>.parquet`: local feature contributions for the selected model and the
   best validation XGBoost benchmark.
+- `model_diagnostics.png`: static comparison, full residual scatter and SHAP summary.
 
 Residual = observed minus predicted. A positive `model_undervaluation_eur` means the
 model predicts above the published value; `below_model_interval` requires the observed
 value below the lower bound. These flags do not demonstrate a profitable transaction.
+Review rows retain trailing exposure and missing-prior-value flags. `low_exposure`
+means fewer than 90 known minutes; it is a post-evaluation warning, not a fitted
+threshold, row exclusion or alteration to the frozen predictions. The final report
+also includes a paired player-cluster bootstrap of MAE differences as a
+post-evaluation diagnostic, without affecting model selection.
 Segment value-band thresholds use training target terciles only. Position segments
 are deferred because historical roles are not verified. No models train during app
 startup; dashboard integration belongs to M8.

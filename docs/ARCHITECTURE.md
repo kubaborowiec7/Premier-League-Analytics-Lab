@@ -160,6 +160,15 @@ populate PostgreSQL or serve as historically verified predictive features. See
 
 ## Reproducibility
 
+M5 uses `data/value_history.py` to read stage-limited, pinned published histories and
+`features/value.py` to construct strictly prior observation features. It is an
+artifact-based source-ID path, independent of unverified SQL player membership.
+`models/value.py` contains fitted benchmarks, SHAP and interval/evaluation utilities;
+`models/value_experiment.py` separates selection from hash-checked frozen final
+evaluation. `scripts/train_value_models.py` is the explicit CLI and
+`scripts/plot_value_report.py` renders existing outputs. See [VALUE_MODELS.md](VALUE_MODELS.md).
+No changes to the canonical database or app-startup behavior are required.
+
 Every model run should eventually record:
 - run ID,
 - timestamp,

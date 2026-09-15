@@ -110,6 +110,42 @@ def regression_metrics(actual: np.ndarray, prediction: np.ndarray) -> dict:
     }
 
 
+def clustered_mae_difference(
+    actual: np.ndarray,
+    prediction: np.ndarray,
+    baseline: np.ndarray,
+    players: np.ndarray,
+    *,
+    seed: int = 42,
+    resamples: int = 2000,
+) -> dict:
+    """Paired player-cluster bootstrap; negative differences favor the learned model.
+
+    Resampling whole player histories preserves within-player dependence, but does
+    not account for shared valuation-date shocks or unseen future distribution shift.
+    """
+    delta = np.abs(np.asarray(actual) - prediction) - np.abs(np.asarray(actual) - baseline)
+    clusters = (
+        pd.DataFrame({"player": players, "delta": delta})
+        .groupby("player")
+        .delta.agg(["sum", "count"])
+    )
+    if clusters.empty or resamples < 1:
+        raise ValueError("Bootstrap requires observations and positive resamples")
+    indices = np.random.default_rng(seed).integers(0, len(clusters), (resamples, len(clusters)))
+    sampled = clusters["sum"].to_numpy()[indices].sum(axis=1) / clusters["count"].to_numpy()[
+        indices
+    ].sum(axis=1)
+    return {
+        "difference_eur": float(delta.mean()),
+        "lower_95_eur": float(np.quantile(sampled, 0.025)),
+        "upper_95_eur": float(np.quantile(sampled, 0.975)),
+        "player_clusters": len(clusters),
+        "resamples": resamples,
+        "seed": seed,
+    }
+
+
 def interval_scale(frame: pd.DataFrame, fallback: float, floor: float) -> np.ndarray:
     """Predetermined scale depends on the prior value, never the current target."""
     return np.maximum(frame.previous_value_eur.fillna(fallback).to_numpy(dtype=float), floor)
@@ -150,6 +186,13 @@ def evaluate_model(
             "market_value_eur",
         ]
     ].copy()
+    # Carry exposure into review rankings; these flags do not alter frozen predictions.
+    for feature in ("minutes_365", "appearances_365", "previous_value_eur"):
+        if feature in test:
+            result[feature] = test[feature]
+    result["missing_previous_value"] = test.previous_value_eur.isna()
+    if "minutes_365" in test:
+        result["low_exposure"] = test.minutes_365.fillna(0) < 90
     result["predicted_value_eur"] = model.predict(test)
     width = quantile * interval_scale(test, model.fallback, floor)
     result["lower_eur"] = np.maximum(0, result.predicted_value_eur - width)

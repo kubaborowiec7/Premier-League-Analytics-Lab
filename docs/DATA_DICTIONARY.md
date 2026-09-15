@@ -173,3 +173,30 @@ Analytical/model-ready table. Exact metric columns will evolve.
 | created_at | timestamptz | materialization time |
 
 Primary modelling grain should make `competition_id` explicit even while V1 only contains EPL.
+
+## M5 artifact tables
+
+Grain: `player_id` (published `tm:player:` ID), `competition_id`, `valuation_date`;
+`season` is derived using the manifest's season-start month. These files are not SQL
+marts and make no valuation-date club-membership claim.
+
+| Fields | Meaning |
+|---|---|
+| `cohort_context` | `recent_prior_competition_participant` |
+| `market_value_eur` | Observed dated editorial valuation, target only |
+| `previous_value_eur`, `previous_valuation_date` | Strictly earlier source valuation |
+| `last_appearance_date`, `days_since_appearance` | Strictly prior competition appearance |
+| `age_years`, `days_since_valuation` | Target-date age and lag age in days |
+| `appearances_365`, `minutes_365` | Prior 365-day competition exposure |
+| `goals_per90_365`, `assists_per90_365` | Prior counts / complete positive minutes * 90 |
+| `predicted_value_eur`, `lower_eur`, `upper_eur` | Frozen model estimate and calibrated interval |
+| `residual_eur` | Observed minus predicted EUR |
+| `model_undervaluation_eur` | Predicted minus observed EUR; not proof of mispricing |
+| `relative_gap`, `uncertainty_scaled_gap` | Gap / floored observed value or interval half-width |
+| `assessment` | Below/within/above model interval |
+| `low_exposure`, `missing_previous_value` | Review flags; no filtering or prediction changes |
+| `shap_*`, `base_value` | Additive explanations in fitted target units |
+
+Undefined exposure/rates/lag values remain missing until training-fitted preprocessing.
+Names are display metadata and never predictors. Ranking keeps only the latest final
+test observation per player/competition; valuation dates must remain visible.

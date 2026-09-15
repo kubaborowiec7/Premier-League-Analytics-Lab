@@ -13,6 +13,7 @@ from pl_analytics.features.value import FEATURES, build_value_features, chronolo
 from pl_analytics.models.value import (
     calibrate_interval,
     candidate_models,
+    clustered_mae_difference,
     evaluate_model,
     regression_metrics,
 )
@@ -183,6 +184,17 @@ def run_experiment(
         "segments": segments,
         "explanations": explanations,
         "ranking_players": len(latest),
+        "paired_mae_bootstrap": {
+            model.name: clustered_mae_difference(
+                test.market_value_eur.to_numpy(),
+                chosen.predict(test),
+                model.predict(test),
+                test.player_id.to_numpy(),
+                seed=config["seed"],
+            )
+            for model in models
+            if model.name in {"median", "persistence"}
+        },
         "residual_mean_eur": float(predictions.residual_eur.mean()),
         "residual_quantiles_eur": predictions.residual_eur.quantile([0.05, 0.5, 0.95]).to_dict(),
     }

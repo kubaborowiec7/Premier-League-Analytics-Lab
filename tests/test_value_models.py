@@ -11,6 +11,7 @@ from pl_analytics.models.value import (
     ValueModel,
     calibrate_interval,
     candidate_models,
+    clustered_mae_difference,
     evaluate_model,
     regression_metrics,
 )
@@ -160,6 +161,17 @@ def test_interval_uses_calibration_order_statistic():
         calibrate_interval(model, frame.iloc[:1], alpha=0.1, floor=100)
 
 
+def test_cluster_bootstrap_preserves_constant_paired_difference():
+    result = clustered_mae_difference(
+        np.array([3.0, 4.0, 5.0]),
+        np.array([2.0, 3.0, 4.0]),
+        np.array([0.0, 1.0, 2.0]),
+        np.array(["a", "a", "b"]),
+    )
+    assert result["player_clusters"] == 2
+    assert result["difference_eur"] == result["lower_95_eur"] == result["upper_95_eur"] == -2
+
+
 def test_metrics_and_residual_direction():
     metrics = regression_metrics(np.array([1.0, 4.0]), np.array([2.0, 2.0]))
     assert metrics["mae_eur"] == 1.5
@@ -180,6 +192,43 @@ def test_metrics_and_residual_direction():
     result = evaluate_model(ValueModel("persistence", "eur", None, 100), frame, 0.1, 100)
     assert result.iloc[0].model_undervaluation_eur == 50
     assert result.iloc[0].assessment == "below_model_interval"
+    flagged = evaluate_model(
+        ValueModel("persistence", "eur", None, 100), frame.assign(minutes_365=1), 0.1, 100
+    )
+    assert flagged.iloc[0].low_exposure
+    assert not flagged.iloc[0].missing_previous_value
+    assert flagged.iloc[0].predicted_value_eur == result.iloc[0].predicted_value_eur
+
+
+def test_synthetic_experiment_round_trip(monkeypatch, tmp_path, config, fitted):
+    frame, _ = fitted
+    all_rows = []
+    for year in range(2020, 2024):
+        part = frame.copy()
+        part["player_id"] = [f"p{index}" for index in range(len(part))]
+        part["player_name"] = part.player_id
+        part["competition_id"] = "TEST"
+        part["season"] = str(year)
+        part["valuation_date"] = pd.Timestamp(f"{year}-06-01", tz="UTC")
+        part["cohort_context"] = "recent_prior_competition_participant"
+        all_rows.append(part)
+    data = pd.concat(all_rows, ignore_index=True)
+
+    def read_stage(config, raw_dir, *, end_date, download):
+        return data.loc[data.valuation_date <= pd.Timestamp(end_date, tz="UTC")], None, None, []
+
+    monkeypatch.setattr("pl_analytics.models.value_experiment.read_value_history", read_stage)
+    monkeypatch.setattr(
+        "pl_analytics.models.value_experiment.build_value_features", lambda a, v, p, c: a
+    )
+    selected = run_experiment(config, tmp_path, tmp_path, stage="select")
+    before = (tmp_path / "models.joblib").read_bytes()
+    final = run_experiment(config, tmp_path, tmp_path, stage="final")
+    assert final["chosen"] == selected["chosen"]
+    assert final["metrics"]["median"]["n"] == 80
+    assert final["ranking_players"] == 80
+    assert before == (tmp_path / "models.joblib").read_bytes()
+    assert pd.read_parquet(tmp_path / "predictions.parquet").low_exposure.all()
 
 
 def test_final_requires_unchanged_selection_before_reading_data(tmp_path, config):

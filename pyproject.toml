@@ -32,6 +32,7 @@ dependencies = [
 
 [project.scripts]
 pl-db-smoke = "pl_analytics.data.database:main"
+pl-ingest = "pl_analytics.data.cli:main"
 
 [project.optional-dependencies]
 dev = [

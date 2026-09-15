@@ -11,6 +11,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: pl_analytics
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pl_analytics"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,3 +50,19 @@ jobs:
 
       - name: Tests
         run: pytest
+
+      - name: PostgreSQL integration tests
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pl_analytics
+        run: pytest tests/test_postgres_ingestion.py
+
+      - name: Pinned public-data ingestion and replay
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pl_analytics
+        run: python scripts/verify_ingestion.py --load --initialize-schema
+
+      - name: Upload ingestion verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-ingestion-verification
+          path: artifacts/m1-verification.json

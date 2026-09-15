@@ -1,0 +1,24 @@
+{
+  "competition_id": "EPL",
+  "competition_name": "Premier League",
+  "country": "England",
+  "season": "2023/24",
+  "start_date": "2023-07-01",
+  "end_date": "2024-06-30",
+  "match_source_code": "E0",
+  "match_source_season": "2324",
+  "match_timezone": "Europe/London",
+  "match_sha256": "b2e057b0ed959f198b0f63d2391c01239f3608e6de5db68edab3f88e04d07ff3",
+  "player_source_code": "GB1",
+  "player_dataset_version": "published-2026-07-06",
+  "player_sha256": {
+    "players.csv.gz": "d22e407981d5b51a79bf8ff59835729f3526f7dc3495a6d8ed2f852ed2e86403",
+    "player_valuations.csv.gz": "608e32e5ad2231074f3505c469ad727be66d7e6efda6af918afd85379439631d",
+    "clubs.csv.gz": "aa57ab56e87faffaea1e8697439a32caf10116d8f2f2dfb3a57193c0bb1d641b"
+  },
+  "expected_counts": {
+    "matches": 380,
+    "players": 948,
+    "player_market_values": 2093
+  }
+}

@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS matches (
     competition_id TEXT REFERENCES competitions(competition_id),
     season TEXT NOT NULL,
     match_date TIMESTAMPTZ NOT NULL,
+    match_time_known BOOLEAN NOT NULL DEFAULT FALSE,
     home_club_id TEXT REFERENCES clubs(club_id),
     away_club_id TEXT REFERENCES clubs(club_id),
     home_goals INTEGER,
@@ -93,6 +94,10 @@ CREATE TABLE IF NOT EXISTS player_market_values (
     market_value_eur NUMERIC(16, 2) NOT NULL,
     club_id TEXT REFERENCES clubs(club_id),
     source TEXT NOT NULL,
+    competition_id TEXT REFERENCES competitions(competition_id),
+    season TEXT,
+    source_reported_club_id TEXT REFERENCES clubs(club_id),
+    competition_context TEXT NOT NULL DEFAULT 'source_reported_unverified',
     PRIMARY KEY (player_id, valuation_date, source),
     CHECK (market_value_eur >= 0)
 );

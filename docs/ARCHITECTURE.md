@@ -126,7 +126,7 @@ a bounded connection attempt, `SELECT 1`, and disposal of the engine. Importing
 modules and starting the Streamlit landing page require no database connection.
 Connection errors are reported without logging raw driver messages or credentials.
 Docker Compose initializes the existing schema in dependency order on an empty volume;
-schema migrations and analytical SQL remain later-milestone work.
+the M1 migration below extends it. Analytical SQL remains later-milestone work.
 
 M1 now adds an explicit additive ingestion migration and these data modules:
 `snapshots.py` (immutable acquisition/checksums), `contracts.py` (batch/scope validation),

@@ -385,7 +385,7 @@ See `docs/GITHUB_WORKFLOW.md`.
 | Milestone | Status |
 |---|---|
 | M0 — Repository foundation | Implemented |
-| M1 — Data ingestion | Implemented; PostgreSQL CI verification pending |
+| M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
 | M2–M10 | Not started |
 
 The landing page explains the project. Ingestion is available through explicit CLI

@@ -1,4 +1,4 @@
-"""M0 landing page: project context without data loading or model training."""
+"""Project landing page without data loading or model training."""
 
 import streamlit as st
 from pydantic import ValidationError

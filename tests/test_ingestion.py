@@ -293,3 +293,42 @@ def test_sidecar_rejects_path_traversal(tmp_path: Path) -> None:
     manifest.write_text(json.dumps(metadata))
     with pytest.raises(DataValidationError, match="filename"):
         Snapshot.read(manifest)
+
+
+@pytest.mark.parametrize("invalid_hash", [None, 123, "invalid"])
+def test_requested_checksum_pins_cannot_be_bypassed(tmp_path: Path, invalid_hash: object) -> None:
+    checksums = tmp_path / "checksums.json"
+    checksums.write_text(
+        json.dumps(
+            {name: invalid_hash for name in ("players.csv", "player_valuations.csv", "clubs.csv")}
+        )
+    )
+    assert (
+        main(
+            [
+                "player-values",
+                "--competition",
+                "EPL",
+                "--competition-name",
+                "Premier League",
+                "--country",
+                "England",
+                "--source-code",
+                "GB1",
+                "--season",
+                "2023/24",
+                "--start-date",
+                "2023-07-01",
+                "--end-date",
+                "2024-06-30",
+                "--snapshot-dir",
+                str(FIXTURES),
+                "--dataset-version",
+                "synthetic-v1",
+                "--checksums",
+                str(checksums),
+            ]
+        )
+        == 1
+    )
+    assert not (tmp_path / "data/raw").exists()

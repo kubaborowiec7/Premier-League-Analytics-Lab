@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+import re
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
@@ -81,6 +82,11 @@ def _player_snapshots(args: argparse.Namespace, store: SnapshotStore) -> list[Sn
     if not args.dataset_version:
         raise ValueError("--dataset-version is required for player snapshot acquisition")
     checksums = json.loads(args.checksums.read_text()) if args.checksums else {}
+    if not isinstance(checksums, dict) or any(
+        not isinstance(value, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", value)
+        for value in checksums.values()
+    ):
+        raise ValueError("Checksum values must be SHA-256 strings with 64 hexadecimal characters")
     result = []
     for table in ("players", "player_valuations", "clubs"):
         filename = f"{table}.csv.gz"

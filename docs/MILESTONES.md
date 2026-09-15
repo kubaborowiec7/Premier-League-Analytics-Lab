@@ -79,7 +79,7 @@ The pinned sample produces 760 team-match rows, 948 valuation-only player-season
 and 2,093 source-separated valuations. Local Docker is still unavailable.
 The ordinary team-match/player-season marts, conservative prior-five-game histories,
 canonical checks/indexes and executable SQL examples are described in
-[SQL_ANALYTICS.md](SQL_ANALYTICS.md). M3 has not started.
+[SQL_ANALYTICS.md](SQL_ANALYTICS.md). M3 audits these data limitations.
 
 Deliver:
 - finalized canonical schema,
@@ -104,6 +104,16 @@ Suggested commit:
 ---
 
 ## M3 — EDA and data quality
+
+Implementation status: complete. Tracking issue: #5.
+Local verification: compileall and Ruff passed; 72 tests passed and 13 PostgreSQL
+tests skipped without a server. The notebook executed from a fresh kernel on both
+synthetic fixtures and the pinned 380-match / 2,093-valuation sample. CI repeats
+the offline notebook execution after validating M1 ingestion and M2 SQL.
+The pinned-sample notebook, offline report generator, synthetic tests and leakage
+audit are described in [DATA_QUALITY.md](DATA_QUALITY.md). Data blockers are tracked
+in #6 (appearances/identity), #7 (historical membership) and #8 (history/holdouts).
+M4 has not started.
 
 Deliver:
 - reproducible EDA notebook,

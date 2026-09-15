@@ -141,6 +141,13 @@ views, including a separate pre-match view with a conservative timestamp cutoff.
 `scripts/verify_analytics.py` reports coverage without downloading sources. Retrospective
 views are not model-ready historical feature tables. See [SQL_ANALYTICS.md](SQL_ANALYTICS.md).
 
+M3's `data/quality.py` reuses the M1 adapters to analyse checksum-pinned local archives
+without a database or network. `scripts/run_quality.py` writes aggregate diagnostics;
+`notebooks/01_data_quality.ipynb` uses the same functions for exploratory figures.
+`scripts/execute_quality_notebook.py` validates a fresh-kernel run, with outputs kept
+under ignored artifacts and uploaded in CI. No canonical/raw data or model features
+are changed. See [DATA_QUALITY.md](DATA_QUALITY.md) for the leakage audit and findings.
+
 ---
 
 ## Reproducibility

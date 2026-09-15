@@ -336,7 +336,32 @@ service while retaining its data. A connection smoke check verifies connectivity
 not schema contents or readiness of analytics artifacts.
 
 CI installs the package on Python 3.12, validates Compose, compiles `src`, and runs
-Ruff and the offline test suite, including Streamlit's app test runner.
+Ruff and the offline test suite, including Streamlit's app test runner. It also runs
+PostgreSQL 16 integration tests and the pinned M1 public-data ingestion/replay check.
+
+## M1 data ingestion
+
+```bash
+python scripts/verify_ingestion.py
+```
+
+This validates the pinned 2023/24 sample: 380 matches and 2,093 source-reported EPL
+valuations for 948 players. Files are archived with SHA-256 and provenance under
+ignored `data/raw/`. Repeat runs reuse the archived files. To also load PostgreSQL:
+
+```bash
+docker compose up -d --wait db
+python scripts/verify_ingestion.py --load --initialize-schema
+```
+
+The explicit schema option also upgrades an existing M0 database. The check loads
+and replays both batches, verifies counts and confirms provenance links. See
+[the ingestion guide](docs/INGESTION.md) for individual CLI commands, local published
+snapshot imports, validation behavior and known identity/time limitations.
+
+Historical competition membership in the valuation source is not fully verified;
+reported club context is preserved separately and is not a valid historical feature.
+Raw datasets, local reports and credentials are not committed.
 
 ---
 
@@ -360,10 +385,10 @@ See `docs/GITHUB_WORKFLOW.md`.
 | Milestone | Status |
 |---|---|
 | M0 — Repository foundation | Implemented |
-| M1 — Data ingestion | Not started |
+| M1 — Data ingestion | Implemented; PostgreSQL load/replay verified in CI |
 | M2–M10 | Not started |
 
-The landing page explains the project and clearly labels data/model artifacts as
-not built yet. No ingestion, analytics models or predictions are implemented in M0.
+The landing page explains the project. Ingestion is available through explicit CLI
+commands; dashboard-ready features, trained models and predictions are not built yet.
 
 The exact first Codex instruction is in `CODEX_START_PROMPT.md`.

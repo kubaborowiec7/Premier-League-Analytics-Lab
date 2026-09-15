@@ -37,6 +37,7 @@ This file starts as a canonical target schema. Update it whenever ingestion chan
 | competition_id | text | competition |
 | season | text | season label |
 | match_date | timestamptz | scheduled/played datetime |
+| match_time_known | boolean | true only when the source supplied kickoff time; false means local-midnight placeholder |
 | home_club_id | text | home club |
 | away_club_id | text | away club |
 | home_goals | int | full-time home goals |
@@ -64,7 +65,14 @@ This file starts as a canonical target schema. Update it whenever ingestion chan
 | valuation_date | date | date of valuation |
 | market_value_eur | numeric | editorial market value |
 | club_id | text | club at/near valuation date |
+| source_reported_club_id | text | source club field, retained separately from verified historical membership |
+| competition_id | text | canonical code mapped from source-reported competition |
+| season | text | explicit ingestion season label; new M1 rows always retain scope |
+| competition_context | text | `source_reported_unverified`; must not be used as historical league evidence |
 | source | text | source dataset |
+
+M1 leaves valuation `club_id` NULL. Scope fields are nullable in SQL only to accommodate
+pre-existing M0 records without inventing missing historical context.
 
 ## source_snapshots
 
@@ -75,10 +83,32 @@ This file starts as a canonical target schema. Update it whenever ingestion chan
 | source_url | text | retrieval URL |
 | retrieved_at | timestamptz | retrieval time |
 | dataset_version | text | version |
+| license_or_terms_note | text | source attribution and licence/terms notes |
 | coverage_start | date | coverage start |
 | coverage_end | date | coverage end |
 | sha256 | text | file checksum |
 | local_path | text | raw local file |
+
+The source/checksum pair is unique. Full-file coverage stays NULL when not established;
+filtered selection windows belong to ingestion batches instead.
+
+## ingestion_batches and ingestion_batch_snapshots
+
+| Column (ingestion_batches) | Type | Meaning |
+|---|---|---|
+| batch_id | uuid | deterministic identity of scope, loader version, source bytes and accepted records |
+| source | text | adapter source |
+| competition_id / season | text | canonical scope |
+| coverage_start / coverage_end | date | inclusive requested selection window, not guaranteed fixture coverage |
+| loader_version | text | adapter contract version |
+| row_counts | jsonb | accepted deduplicated rows per canonical table |
+| skipped_rows | integer | records filtered out by source competition/date scope |
+| warnings | jsonb | contextual limitations such as unverified historical membership |
+| created_at | timestamptz | successful ingestion transaction time |
+
+`ingestion_batch_snapshots` has a composite primary key `(batch_id, snapshot_id)` and
+foreign keys to batches and raw source snapshots. It links multi-file imports to all
+their inputs. Reruns reuse a batch; conflicting canonical observations roll back.
 
 ## model_runs
 

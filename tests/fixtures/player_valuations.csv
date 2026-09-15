@@ -1,0 +1,6 @@
+player_id,date,market_value_in_eur,current_club_id,player_club_domestic_competition_id
+1,2023-08-01,1000000,10,GB1
+1,2024-05-01,1200000,10,GB1
+2,2023-09-01,2000000,11,GB1
+1,2025-08-01,9000000,10,GB1
+2,2023-09-01,3000000,11,FR1

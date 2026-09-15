@@ -6,7 +6,7 @@ Work sequentially. Each milestone should have a GitHub Issue or Milestone and a 
 
 Implementation status: implemented. Package configuration, the optional `pl-db-smoke`
 command, PostgreSQL Compose setup, offline tests, CI and the landing page are in place.
-See README for installation and verification commands. M1 has not started.
+See README for installation and verification commands.
 
 Local verification (2026-09-14, Python 3.12.14): editable installation succeeded;
 `python -m compileall src`, `ruff check .`, `pytest` (28 tests, including Streamlit
@@ -36,6 +36,16 @@ Suggested commit:
 ---
 
 ## M1 — Data ingestion and provenance
+
+Implementation status: complete. Ingestion code, source pins, offline tests and
+documentation are implemented. PostgreSQL 16 integration tests and the pinned public
+sample load/replay passed in GitHub Actions on commit `2a77694`:
+https://github.com/kubaborowiec7/Premier-League-Analytics-Lab/actions/runs/34944298108.
+The sample includes 380 matches, 948 player profiles and 2,093 source-reported EPL
+valuations. Batch replay and provenance were verified against a real PostgreSQL service.
+Local Docker remains unavailable; local raw-file validation is reproducible offline.
+The optional API client is deferred. Tracking issue: #1; implementation PR: #2.
+M2 has not started.
 
 Deliver:
 - competition-parameterized Football-Data.co.uk downloader (EPL enabled in V1),

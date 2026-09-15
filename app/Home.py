@@ -1,4 +1,4 @@
-"""M0 landing page: project context without data loading or model training."""
+"""Project landing page without data loading or model training."""
 
 import streamlit as st
 from pydantic import ValidationError
@@ -20,8 +20,8 @@ st.write(
 )
 
 st.info(
-    "M0 — Repository foundation. Data and model artifacts are not built yet. "
-    "Analytics and predictions will become available in later milestones."
+    "M1 — Data ingestion is available through the CLI. Dashboard data and model "
+    "artifacts are not built yet. Analytics and predictions will follow in later milestones."
 )
 
 try:

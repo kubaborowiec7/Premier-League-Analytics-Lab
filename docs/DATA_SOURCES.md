@@ -2,6 +2,10 @@
 
 The core project should remain reproducible and should not depend on fragile web scraping.
 
+M1 implementation and refresh commands: [INGESTION.md](INGESTION.md).
+The pinned sample manifest is `data/manifests/m1_sources.json`; acquisition timestamps
+and source URLs are retained in raw sidecars and PostgreSQL provenance records.
+
 ## 1. Football-Data.co.uk — match-level core source
 
 Website:
@@ -54,6 +58,19 @@ Therefore:
 - do not pretend it contains live 2026/27 valuation data.
 
 Do not make Transfermarkt scraping a core project dependency.
+
+M1 uses the upstream project's published CSV mirror, documented in its README:
+`https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/` with `players.csv.gz`,
+`player_valuations.csv.gz` and `clubs.csv.gz`. The chosen publication is labelled
+`published-2026-07-06`, with exact file hashes pinned locally and in CI. The upstream
+repository declares CC0-1.0; attribution and terms notes are preserved, and no raw
+third-party datasets are committed to this repository.
+
+The upstream `player_valuations` transformation resolves clubs through transfers when
+possible but falls back to current player-club information. Its competition column is
+therefore not sufficient proof of historical league membership. M1 labels this context
+as unverified and leaves canonical historical `club_id` unset. See the
+[source transformation](https://github.com/dcaribou/transfermarkt-datasets/blob/master/dbt/models/curated/player_valuations.sql).
 
 ---
 

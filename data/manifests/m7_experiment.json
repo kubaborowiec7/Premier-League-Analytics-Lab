@@ -76,6 +76,7 @@
   "test_end": "2026-09-15",
   "lookback_days": 1095,
   "min_train_matches": 500,
+  "min_feature_matches": 100,
   "primary_metric": "log_loss",
   "elo_k": [
     20,

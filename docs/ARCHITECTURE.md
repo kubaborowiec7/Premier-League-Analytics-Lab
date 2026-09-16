@@ -2,38 +2,24 @@
 
 ## High-level flow
 
-```text
-External Sources
-      |
-      v
-Raw immutable files / API snapshots
-      |
-      v
-Ingestion + validation
-      |
-      v
-PostgreSQL canonical tables
-      |
-      +------------------+
-      |                  |
-      v                  v
-SQL feature marts     Python feature pipelines
-      |                  |
-      +--------+---------+
-               |
-               v
-        Model training
-               |
-      +--------+---------+
-      |                  |
-      v                  v
- Model artifacts     Evaluation reports
-      |                  |
-      +--------+---------+
-               |
-               v
-        Streamlit app
+```mermaid
+flowchart TD
+    A[Published CSV sources] --> B[Immutable archives + provenance]
+    B --> C[M1 canonical ingestion]
+    C --> D[PostgreSQL 16]
+    D --> E[M2 SQL marts and analysis]
+    B --> F[M4-M7 scoped Python feature pipelines]
+    F --> G[Chronological model experiments]
+    G --> H[Frozen models and evaluation artifacts]
+    F --> I[Player profiles and uncertainty]
+    H --> J[Explicit dashboard preparation]
+    I --> J
+    J --> K[Cached read-only Streamlit app]
 ```
+
+The SQL and later file-based analytics paths are deliberately separate in V1.
+M4 appearances do not populate M2 marts; source identities are not silently
+reconciled. The dashboard consumes prepared files and requires no database server.
 
 ## Layers
 

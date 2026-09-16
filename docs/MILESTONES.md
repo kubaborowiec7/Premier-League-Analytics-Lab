@@ -312,7 +312,9 @@ CI reports coverage with an 80% minimum and builds/smoke-tests the container.
 See [DEPLOYMENT.md](DEPLOYMENT.md) and [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 Local verification: 144 tests passed, 13 PostgreSQL tests skipped; package statement
 coverage is 87.05%. Compileall, Ruff, pip check and app Compose validation pass.
-Local Docker daemon is unavailable; hosted container verification is pending.
+Local Docker daemon is unavailable. Full hosted CI, including PostgreSQL, pinned
+experiments and the non-root container smoke test, passed on `4e21499`:
+https://github.com/kubaborowiec7/Premier-League-Analytics-Lab/actions/runs/35071950804.
 
 Deliver:
 - expanded tests,
@@ -329,6 +331,13 @@ Suggested commit:
 ---
 
 ## M10 — Portfolio release
+
+Implementation status: portfolio documentation, three real screenshots, architecture
+diagram, results table, source attribution and CV/LinkedIn draft are prepared; issue #24.
+The user selected local demo only; no public website is published. Package version is
+1.0.0. Release tagging follows successful CI for the release commit.
+Local compileall/Ruff/pip check and editable installation pass; 144 tests pass and
+13 PostgreSQL tests skip locally. See [RELEASE.md](RELEASE.md).
 
 Deliver:
 - final README with screenshots,

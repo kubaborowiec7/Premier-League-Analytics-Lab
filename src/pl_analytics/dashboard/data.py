@@ -117,7 +117,7 @@ def available_competitions(tables: dict[str, pd.DataFrame]) -> list[str]:
 
 
 @st.cache_resource(show_spinner=False)
-def _bundle(path: str, digest: str, modified: int) -> dict:
+def _bundle(path: str, digest: str) -> dict:
     source = Path(path)
     if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
         raise ArtifactError("Model bundle no longer matches prepared dashboard metadata")
@@ -131,7 +131,8 @@ def prepared_models(settings: Settings) -> tuple[dict, dict, pd.DataFrame, dict]
     if not metadata or not metadata.get("models"):
         raise ArtifactError("Match models are not prepared for the dashboard yet.")
     states = table(
-        root / "dashboard/team_states.parquet", ("club_id", "competition_id", "season", "elo")
+        root / "dashboard/team_states.parquet",
+        ("club_id", "competition_id", "season", "origin", "elo"),
     )
     bundles = {}
     paths = {
@@ -140,10 +141,20 @@ def prepared_models(settings: Settings) -> tuple[dict, dict, pd.DataFrame, dict]
     }
     try:
         for name, path in paths.items():
-            bundles[name] = _bundle(
-                str(path.resolve()), metadata["models"][name], path.stat().st_mtime_ns
-            )
-    except (OSError, KeyError, ValueError, ImportError, EOFError) as error:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            if digest != metadata["models"][name]:
+                raise ArtifactError("Model checksum mismatch")
+            bundles[name] = _bundle(str(path.resolve()), digest)
+        origin = pd.Timestamp(bundles["statistics"]["origin"])
+        if (
+            states.empty
+            or not pd.to_datetime(states.origin, utc=True).eq(origin).all()
+            or pd.Timestamp(metadata["origin"]) != origin
+            or not states.competition_id.eq(bundles["statistics"]["competition_id"]).all()
+        ):
+            raise ArtifactError("Team features and models have different origins or competitions")
+    except Exception as error:
+        logging.warning("Dashboard model loading failed: %s", type(error).__name__)
         raise ArtifactError(
             "Prepared match models are missing or incompatible; rebuild the dashboard data."
         ) from error
@@ -172,6 +183,13 @@ def scenario(
         raise ArtifactError("Prepared features are missing for the selected clubs.")
     if context.loc[home, "season"] != context.loc[away, "season"]:
         raise ArtifactError("Club feature seasons do not match.")
+    if (
+        "origin" in context
+        and not pd.to_datetime(context.origin, utc=True)
+        .eq(pd.Timestamp(statistics["origin"]))
+        .all()
+    ):
+        raise ArtifactError("Club features and model origins do not match.")
     matrix, rates = None, None
     if model_name == "calibrated_ml":
         row = {"elo_difference": context.loc[home, "elo"] - context.loc[away, "elo"]}

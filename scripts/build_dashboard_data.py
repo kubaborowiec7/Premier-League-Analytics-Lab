@@ -21,6 +21,8 @@ def main() -> None:
     args = parser.parse_args()
     settings = get_settings()
     config = json.loads(args.manifest.read_text(encoding="utf-8"))
+    if config["competition_id"] not in settings.active_competitions:
+        raise ValueError("The manifest competition must be enabled in ACTIVE_COMPETITIONS")
     history, _ = read_match_history(
         config, settings.data_dir / "raw", end_date=config["test_end"], download=args.download
     )

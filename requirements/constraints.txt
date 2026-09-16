@@ -1,0 +1,22 @@
+# Tested direct runtime dependencies, Python 3.12, 2026-09-16.
+# Transitive dependencies remain resolver-managed; this is not a complete lockfile.
+httpx==0.28.1
+joblib==1.6.0
+matplotlib==3.11.2
+numpy==2.5.3
+pandas==3.0.5
+plotly==7.0.0
+psycopg==3.3.5
+psycopg-binary==3.3.5
+pyarrow==25.0.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+python-dotenv==1.2.3
+scikit-learn==1.9.1
+scipy==1.18.1
+shap==0.52.0
+sqlalchemy==2.0.52
+statsmodels==0.15.0
+streamlit==1.63.0
+tenacity==9.1.4
+xgboost==3.4.1

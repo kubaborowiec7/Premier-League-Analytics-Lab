@@ -501,3 +501,10 @@ Six pages expose prepared player statistics, scouting, valuations, frozen match
 probabilities and model comparisons. After M4–M7, run
 `python scripts/build_dashboard_data.py` and `streamlit run app/Home.py`.
 See [dashboard setup and limitations](docs/DASHBOARD.md).
+
+## Deployment and quality
+
+`docker compose -f compose.app.yml up --build -d` serves the dashboard locally
+with read-only artifacts and a non-root container. See [deployment](docs/DEPLOYMENT.md)
+and the [security review](docs/SECURITY_REVIEW.md). CI enforces 80% package statement
+coverage, runs PostgreSQL integration and builds/smoke-tests the empty-artifact image.

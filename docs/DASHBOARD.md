@@ -24,7 +24,7 @@ Player intervals retain player, competition, season and metric. They resample
 recorded appearances; they are not prospective prediction intervals.
 
 The app caches tables/reports by path and content hash, and trusted model
-bundles by checksum and modification time. It never fits, downloads or connects
+bundles by checksum (verified on every load request). It never fits, downloads or connects
 to PostgreSQL at startup or during prediction. Models must come from this project's
 trusted local build: pickle/joblib is executable and must never be user-uploaded.
 Missing modules remain usable as explanatory empty states; malformed artifacts
@@ -32,7 +32,8 @@ produce sanitized rebuild messages without connection strings or private content
 
 Player statistics are limited to recorded goals, assists and cards; positions
 remain snapshot-based. Similarity holds season, date and position context fixed,
-with an explicit candidate competition universe. Valuations show observed editorial
+with an explicit candidate competition universe and selectable metrics; constant
+peer features are unavailable for similarity. Valuations show observed editorial
 values separately from model estimates and nominal 90% intervals. Fragile rows
 can be revealed explicitly; all rows remain in Model Lab evaluation metrics.
 

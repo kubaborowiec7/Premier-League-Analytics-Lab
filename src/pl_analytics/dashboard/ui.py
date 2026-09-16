@@ -361,7 +361,9 @@ def render(page: str = "Overview") -> None:
     st.markdown(
         "<style>.block-container{max-width:1440px;padding-top:4rem}"
         "[data-testid=stMetric]{background:white;padding:1rem;border:1px solid #dce3eb;"
-        "border-radius:12px}[data-testid=stMetricLabel] p{white-space:normal}</style>",
+        "border-radius:12px}[data-testid=stMetricLabel] p{white-space:normal}"
+        "[data-testid=stMetricValue]{font-size:1.6rem}"
+        "[data-testid=stMetricValue] div{white-space:normal;overflow-wrap:anywhere}</style>",
         unsafe_allow_html=True,
     )
     try:

@@ -49,7 +49,13 @@ jobs:
         run: ruff check .
 
       - name: Tests
-        run: pytest
+        run: pytest --cov=pl_analytics --cov-fail-under=80 --cov-report=xml:artifacts/coverage.xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage
+          path: artifacts/coverage.xml
 
       - name: PostgreSQL integration tests
         env:
@@ -150,3 +156,29 @@ jobs:
         with:
           name: m8-dashboard
           path: artifacts/dashboard/
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate app deployment configuration
+        run: docker compose -f compose.app.yml config --quiet
+      - name: Build isolated app image
+        run: docker build -t pl-analytics:ci .
+      - name: Smoke-test empty-artifact app as non-root
+        run: |
+          docker run -d --name analytics-smoke --read-only --tmpfs /tmp:rw,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8501:8501 pl-analytics:ci
+          test "$(docker exec analytics-smoke id -u)" = "10001"
+          docker exec analytics-smoke python -c "from streamlit.testing.v1 import AppTest; app=AppTest.from_file('app/Home.py').run(timeout=30); assert not app.exception and not app.error; assert 'artifacts are not built yet' in app.info[0].value"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8501/_stcore/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs analytics-smoke
+          exit 1
+      - name: Container logs and cleanup
+        if: always()
+        run: |
+          docker logs analytics-smoke || true
+          docker rm -f analytics-smoke || true

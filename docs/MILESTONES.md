@@ -305,6 +305,15 @@ Suggested commit:
 
 ## M9 — Quality and deployment
 
+Implementation status: deployment configuration and security review implemented;
+tracking issue #22. Direct runtime constraints, a non-root Docker image, read-only
+Compose service, content-aware caching and artifact-context checks are in place.
+CI reports coverage with an 80% minimum and builds/smoke-tests the container.
+See [DEPLOYMENT.md](DEPLOYMENT.md) and [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+Local verification: 144 tests passed, 13 PostgreSQL tests skipped; package statement
+coverage is 87.05%. Compileall, Ruff, pip check and app Compose validation pass.
+Local Docker daemon is unavailable; hosted container verification is pending.
+
 Deliver:
 - expanded tests,
 - coverage report,

@@ -262,3 +262,10 @@ Cross-league comparisons must account for league context before claiming that ra
 per-90 numbers are directly comparable. Candidate approaches include league-season
 standardization, competition-strength coefficients, hierarchical models, or learned
 league adjustments.
+
+## Dashboard artifact boundary
+
+`dashboard/data.py` caches and validates local prepared tables and checksum-pinned
+model bundles. `dashboard/ui.py` renders six pages without training, downloads or
+database access. The explicit `build_dashboard_data.py` CLI assembles display
+names, bootstrap intervals and the latest frozen team states; see [DASHBOARD.md](DASHBOARD.md).

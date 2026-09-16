@@ -9,7 +9,9 @@ from streamlit.testing.v1 import AppTest
 APP_PATH = Path(__file__).resolve().parents[1] / "app" / "Home.py"
 
 
-def test_landing_page_without_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_landing_page_without_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("ARTIFACT_DIR", str(tmp_path / "artifacts"))
     monkeypatch.setenv("ACTIVE_COMPETITIONS", "EPL,LALIGA")
     monkeypatch.setattr(
         "sqlalchemy.create_engine", Mock(side_effect=AssertionError("Database I/O"))

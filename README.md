@@ -494,3 +494,10 @@ commands. M4/M5 analytical and model artifacts are built explicitly; dashboard
 integration is planned for M8.
 
 The exact first Codex instruction is in `CODEX_START_PROMPT.md`.
+
+## Interactive dashboard
+
+Six pages expose prepared player statistics, scouting, valuations, frozen match
+probabilities and model comparisons. After M4–M7, run
+`python scripts/build_dashboard_data.py` and `streamlit run app/Home.py`.
+See [dashboard setup and limitations](docs/DASHBOARD.md).

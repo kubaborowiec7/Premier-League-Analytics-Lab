@@ -397,3 +397,10 @@ selection or predictions. Model-relative review lists retain exposure and missin
 flags. Low exposure is flagged below 90 minutes; no test rows are removed or metrics
 improved by applying this post-evaluation diagnostic. See the
 [model card](../reports/model_cards/player_value.md) for measured failures and uncertainty.
+
+## Advanced profiles
+
+[ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md) defines observed-minute per-90 denominators,
+coverage gates, role/competition/season midrank percentiles, adverse-metric direction
+and the distinction between true aggregated ratios and weighted match percentages.
+Season profiles are retrospective and excluded from the frozen prediction models.

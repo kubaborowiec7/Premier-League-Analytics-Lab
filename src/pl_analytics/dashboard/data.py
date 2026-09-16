@@ -107,6 +107,15 @@ def catalog(settings: Settings) -> tuple[dict[str, pd.DataFrame], list[str]]:
         except ArtifactError as error:
             errors.append(str(error))
             tables[name] = pd.DataFrame(columns=required)
+    try:
+        advanced = table(
+            settings.data_dir / "processed/advanced/player_profiles.parquet", specs["players"][1]
+        )
+        advanced = advanced.loc[advanced.competition_id.isin(settings.active_competitions)]
+        if not advanced.empty:
+            tables["players"] = pd.concat([tables["players"], advanced], ignore_index=True)
+    except ArtifactError as error:
+        errors.append(str(error))
     return tables, errors
 
 

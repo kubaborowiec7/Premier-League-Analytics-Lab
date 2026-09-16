@@ -82,7 +82,13 @@ def _overview(tables: dict) -> None:
 
 
 def _players(frame: pd.DataFrame, settings) -> None:
+    all_seasons = frame
     frame = _season(frame)
+    if "source" in frame and frame.source.eq("FPL-Core-Insights").all():
+        from pl_analytics.dashboard.advanced_players import render_advanced
+
+        render_advanced(frame, all_seasons.loc[all_seasons.source.eq("FPL-Core-Insights")])
+        return
     position = st.selectbox("Position", ["All", *sorted(frame.position_group.unique())])
     minimum = st.slider(
         "Minimum minutes", 0, max(1, int(frame.minutes.max())), min(450, int(frame.minutes.max()))
@@ -152,6 +158,13 @@ def _players(frame: pd.DataFrame, settings) -> None:
 
 def _scouting(frame: pd.DataFrame, all_players: pd.DataFrame) -> None:
     frame = _season(frame)
+    if "source" in frame and frame.source.eq("FPL-Core-Insights").all():
+        from pl_analytics.dashboard.advanced_players import render_advanced
+
+        render_advanced(
+            frame, all_players.loc[all_players.source.eq("FPL-Core-Insights")], scouting=True
+        )
+        return
     frame = frame.loc[frame.minutes.ge(450) & frame.ranking_eligible]
     metrics = st.multiselect(
         "Similarity metrics",

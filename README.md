@@ -13,12 +13,30 @@ There is no public hosted demo. Screenshots below use prepared historical artifa
 not live data. The repository contains code, manifests and small evaluation reports;
 raw datasets and trained bundles are excluded from Git.
 
+## New: advanced player comparisons
+
+Three additional player seasons: **2024/25 (562 profiles), 2025/26 (537), and partial
+2026/27 (406)**. Position-aware radars overlay up to five players in distinct colors,
+including cross-season comparisons. Defensive profiles emphasize tackles,
+interceptions, recoveries, blocks, clearances and aerials. Dark performance panels
+show totals/per-90 values, percentiles and metric coverage.
+
+```bash
+python scripts/build_advanced_players.py --download
+```
+
+The published source covers most requested shooting/passing/possession/defensive
+metrics, with meaningful gaps in the newest season. Progressive passes/carries and
+several other fields remain explicitly unavailable. [Definitions and reproduction](docs/ADVANCED_PLAYERS.md).
+
+![Defender radar comparison](docs/screenshots/defender-comparison.png)
+
 ## What you can explore
 
 | Page | Working functionality |
 |---|---|
 | Overview | Data-driven competition selector and coverage by module |
-| Player Explorer | 570 profiles from 2023/24, per-90 rates, peer percentiles, shrinkage and bootstrap intervals |
+| Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
 | Match Predictor | Frozen-origin H/D/A probabilities; Poisson/Dixon–Coles score matrices |
@@ -162,8 +180,8 @@ preserves the named data volume. See [ingestion](docs/INGESTION.md) and
 - GitHub Actions: Ruff, pytest, PostgreSQL 16 integration, pinned experiment reproduction,
   coverage reporting with an 80% gate, and non-root container smoke tests.
 
-Local verification on 2026-09-16: **144 tests passed**, **13 PostgreSQL tests skipped**
-without a local server; **87.05% package statement coverage**. PostgreSQL is tested
+Local verification on 2026-09-16: **150 tests passed**, **13 PostgreSQL tests skipped**
+without a local server; **87.45% package statement coverage**. PostgreSQL is tested
 separately in CI. Coverage does not imply statistical validity.
 
 ```bash

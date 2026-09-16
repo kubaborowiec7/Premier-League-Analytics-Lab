@@ -351,3 +351,17 @@ Deliver:
 
 Suggested commit:
 `docs: prepare v1 portfolio release`
+
+---
+
+## M11 — Advanced multi-season player profiles
+
+User-requested extension after v1.0.0; issue #26. Implemented three additional player seasons
+from published commit-pinned CSVs, role-based metrics, five-player radar overlays,
+cross-season comparison, scatterplots and dark performance tables. Missing metrics
+retain explicit coverage, and frozen model experiments are unchanged.
+See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md).
+
+Local verification: compileall and Ruff pass; 150 tests pass, 13 PostgreSQL tests
+skip without a local server. Statement coverage: 87.45%. Pinned builds produce
+562 / 537 / 406 profiles from 380 / 380 / 40 matches respectively.

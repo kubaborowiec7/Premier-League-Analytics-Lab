@@ -6,7 +6,7 @@ from pl_analytics.config import Settings, get_settings
 
 
 def test_package_version() -> None:
-    assert __version__ == "0.1.0"
+    assert __version__ == "1.0.0"
 
 
 def test_default_settings_load() -> None:

@@ -141,3 +141,12 @@ jobs:
         with:
           name: m7-match-ml
           path: artifacts/m7/
+
+      - name: Prepare dashboard context
+        run: python scripts/build_dashboard_data.py
+
+      - name: Upload dashboard context
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-dashboard
+          path: artifacts/dashboard/

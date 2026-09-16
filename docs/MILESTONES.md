@@ -183,7 +183,7 @@ selection, final evaluation and report plotting from pinned public archives.
 Local verification: compileall and Ruff passed; 106 tests passed and 13 opt-in
 PostgreSQL tests skipped without a server. Selection, final evaluation and diagnostic
 plot rendering passed against pinned local archives. Low-exposure successor work is
-tracked in #13; M6 has not started.
+tracked in #13. M6 and M7 are implemented below.
 
 Deliver:
 - baseline models,
@@ -273,6 +273,14 @@ Suggested commit:
 ---
 
 ## M8 — Streamlit application
+
+Implementation status: six pages implemented; tracking issue #20. Cached artifacts,
+data-driven competition filters, historical player/scouting views, dated valuation
+intervals, frozen match inference and model cards are integrated. See
+[DASHBOARD.md](DASHBOARD.md). Local compileall and Ruff pass; 139 tests pass
+and 13 PostgreSQL tests skip without a server. All six populated pages were exercised
+with Streamlit AppTest; 20 prepared ML fixtures reproduce frozen probabilities
+to numerical precision.
 
 Competition selector must be data-driven; V1 exposes EPL only.
 

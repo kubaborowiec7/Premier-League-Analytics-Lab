@@ -218,3 +218,13 @@ Maintain this translation in ingestion/configuration or the
 
 V1 only activates `EPL`, but adapters should be written so another competition can be
 enabled by supplying the correct source mapping rather than copying the entire loader.
+
+## Advanced player statistics: FPL Core published snapshots
+
+The extension uses [olbauday/FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights)
+CSV exports at commit `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb`, pinned with 89 file
+hashes in `data/manifests/advanced_players.json`. Coverage: 2024/25, 2025/26 and
+40 matches of 2026/27. The publisher permits reuse with attribution requested;
+upstream-provider rights are not independently granted here. No underlying sports
+website is scraped. Snapshots retain retrieval metadata and remain outside Git.
+See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md) for metric definitions and gaps.

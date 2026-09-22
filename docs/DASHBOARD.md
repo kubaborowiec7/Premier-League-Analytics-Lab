@@ -46,3 +46,11 @@ including poor results and limitations, with comparisons confined to each experi
 Run from the repository root. Layout uses responsive Streamlit columns and wide
 tables with horizontal scrolling. Tests cover navigation with absent data, synthetic
 competition filters, player/scouting interaction, corrupt files and probability mass.
+
+## Advanced player comparison
+
+Run `python scripts/build_advanced_players.py --download` to add 2024/25, 2025/26
+and partial 2026/27 profiles. Player Explorer and Scouting Finder then expose
+role-specific radar overlays (up to five players), cross-season comparisons,
+selectable scatterplot axes and dark Total/Per-90 performance panels. The 2023/24
+view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md).

@@ -157,6 +157,15 @@ jobs:
           name: m8-dashboard
           path: artifacts/dashboard/
 
+      - name: Reproduce multi-season advanced player statistics
+        run: python scripts/build_advanced_players.py --download
+
+      - name: Upload advanced player profiles and coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: advanced-player-profiles
+          path: data/processed/advanced/
+
   container:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -224,3 +224,11 @@ missing averages and zero count. Only these eleven features enter classifiers.
 Observed scores are label metadata joined after feature creation. Prediction rows
 retain H/D/A probabilities and the model/temperature variant. ML variants do not
 provide goal rates; aligned M6 rows retain their original score-model columns.
+
+## Advanced player profiles
+
+`data/processed/advanced/player_profiles.parquet`: one stable FPL player code /
+competition / season, with snapshot role, reference date, minutes and appearances.
+Each registry metric has its observed total or percentage, `_per90` and `_coverage`.
+`coverage.json` records source commit, dated season coverage and availability counts.
+See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md) for denominator and percentile semantics.

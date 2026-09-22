@@ -1,0 +1,581 @@
+{
+  "repository": "olbauday/FPL-Core-Insights",
+  "commit": "d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb",
+  "source_url": "https://github.com/olbauday/FPL-Core-Insights",
+  "license_note": "Publisher README permits reuse with requested attribution. Underlying sports-provider rights are not independently licensed here; local research only, no bulk redistribution.",
+  "competition_id": "EPL",
+  "source_competition": "Premier League",
+  "reference_date": "2026-09-16",
+  "position_map": {
+    "Goalkeeper": "GK",
+    "Defender": "DEF",
+    "Midfielder": "MID",
+    "Forward": "FWD"
+  },
+  "seasons": [
+    {
+      "season": "2024/25",
+      "start_date": "2024-07-01",
+      "end_date": "2025-06-30",
+      "files": [
+        {
+          "kind": "players",
+          "path": "data/2024-2025/players/players.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2024-2025/players/players.csv",
+          "sha256": "be331f2349cba22cc8fbf5f432ebc152b6c325054e4faa2683d65c336a8143b3"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2024-2025/matches/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2024-2025/matches/matches.csv",
+          "sha256": "32dc2752de7c50c58fc03df268391af9243a6f7893b49ac96ae1ac314bb166dd"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2024-2025/playermatchstats/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2024-2025/playermatchstats/playermatchstats.csv",
+          "sha256": "c1486c551c8ab95cdd8b94c6b9c708581af438deb0e9127c85df757b6d17f6ff"
+        }
+      ],
+      "expected_matches": 380,
+      "expected_players": 562
+    },
+    {
+      "season": "2025/26",
+      "start_date": "2025-07-01",
+      "end_date": "2026-06-30",
+      "files": [
+        {
+          "kind": "players",
+          "path": "data/2025-2026/players.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/players.csv",
+          "sha256": "20621e5a365a5ab5ed4f787345b75975f2b32e79fab5d219235c6060084ccee4"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW1/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW1/playermatchstats.csv",
+          "sha256": "6bb92a50657056d41085ac42721b2b562f74cd116f91a217f8c28b8bb1cd761e"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW1/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW1/matches.csv",
+          "sha256": "5549d2572a5e77faff51c713c23df73b1196a432db2376c450ec290d27cdbf9e"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW10/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW10/playermatchstats.csv",
+          "sha256": "e061903bff01d5de6325c38ff489384d134acb385f304726da36d6031ab05a1c"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW10/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW10/matches.csv",
+          "sha256": "741ce25519abd3deb69668e44ff7096e6e751154e28430d91e3393c5ce84f097"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW11/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW11/playermatchstats.csv",
+          "sha256": "cce3e28a646c4f88ab4da548111de07e4cd2f5a698c22406518eea16613bc7f9"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW11/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW11/matches.csv",
+          "sha256": "206ce02f820ee1c2ef7f17887337b3b06733a49dd5cf1df74bf529d2f175e2cb"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW12/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW12/playermatchstats.csv",
+          "sha256": "d96f0ec0b5f401637e57681572833d51031011f15c1bfdbdd49ca9de8d3d3f74"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW12/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW12/matches.csv",
+          "sha256": "cbae95721d2718f5941547831abd6770b13a47fb3bf59314a9795282e6c6d40d"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW13/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW13/playermatchstats.csv",
+          "sha256": "ace489d0910d27cd630d0cc11616e357a9c4014066a9a8fb5ca5a8db81513b3b"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW13/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW13/matches.csv",
+          "sha256": "d7ccb8bad05a3de7c9ee42d03368ae303ae91a205f6b7e318bda4f232e853462"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW14/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW14/playermatchstats.csv",
+          "sha256": "7a7b969509a5aa652e6f3ed234eacf4e4867b153b33ffceceee534d649d2f031"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW14/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW14/matches.csv",
+          "sha256": "5109c1665a9c3c6dd50a6fe224dc8f4483f9e7257ac58b00bd7d6f6cb140b0fc"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW15/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW15/playermatchstats.csv",
+          "sha256": "a82d26231d324b45cd34674cdc6e0bb49e6da00849eaad0702f218e2efba1a73"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW15/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW15/matches.csv",
+          "sha256": "a2d9ae0c6effe2d34d32c4515b0cae2f3fa2702b27fe189f669335b15f062542"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW16/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW16/playermatchstats.csv",
+          "sha256": "f9b4fc50213e9d8d641c2e68701da82226f87c31d08a8b0c3ae420b51ac30e64"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW16/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW16/matches.csv",
+          "sha256": "ed77a51a517735946f2dd36f6debcc0550693a97b95ec3f7157fb913fbfecbd6"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW17/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW17/playermatchstats.csv",
+          "sha256": "6e2c85f463698108ccd4b78d8da05041845d4c58c687c7d3263118c9a2bcba1b"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW17/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW17/matches.csv",
+          "sha256": "1767be9305727f851be5e6b67cd8495b5cd8b0f0e43a8ec3a1db8d7814e193c9"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW18/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW18/playermatchstats.csv",
+          "sha256": "87c50585f36dcd170684cb373f3ed1a978363d2bd6feb143270e3ceff213e629"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW18/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW18/matches.csv",
+          "sha256": "9696f26d09394a74b0265e1be7bbca0c10b8069f98d71deb3bc02bd029af5819"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW19/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW19/playermatchstats.csv",
+          "sha256": "35eed02c3cb78c19cba72c3394bbbe31a8e30fa64d6191cebb692268db356479"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW19/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW19/matches.csv",
+          "sha256": "ddbdc5e6c06a2a86616f5ab42ed6cb014f70c4e5d32061705c35547ddcf0c52b"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW2/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW2/playermatchstats.csv",
+          "sha256": "b7eff1368430ea85dde2df21353003cf633d2aa69a017b40292efbf1830d9c71"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW2/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW2/matches.csv",
+          "sha256": "1ed769e2fcaecd6728bc77baf189cfb1631fd62cb7ad6eaa39345fc3f438652a"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW20/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW20/playermatchstats.csv",
+          "sha256": "6d1beb472e97a64aee0cf4c7931ce4309eb8900e24c471d4646b2c7e63d028b8"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW20/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW20/matches.csv",
+          "sha256": "3248f45151951ff44159e02721b6af6adea95449dfe215cd4507d03e4b933d4d"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW21/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW21/playermatchstats.csv",
+          "sha256": "5e1a8999be36a6f9b39b3a57cb8eb8f7aee915ae5a57eb60d897a11c61dc536b"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW21/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW21/matches.csv",
+          "sha256": "01e3e82c627ccf32857834db53c0e960cd9021ae46e1eb15eafeb9f74258e24d"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW22/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW22/playermatchstats.csv",
+          "sha256": "3c4c1d3aea2424906c3e5031bf3185c5ed24136302b66378fe93f32d80c41be2"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW22/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW22/matches.csv",
+          "sha256": "b3be587273d9565f458de306bff41e8001e83a8d95e58bb60f349bd463bddbbb"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW23/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW23/playermatchstats.csv",
+          "sha256": "dbfdf052dae962e3440295900088d7ee4443ef181ec5c65e40a87d2926b1cadb"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW23/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW23/matches.csv",
+          "sha256": "eefeedfff43f4971410421dbebfd04a52f29cdec2cb3ae9a68da056d0ccf3f17"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW24/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW24/playermatchstats.csv",
+          "sha256": "de252fbcd6ce0a7ba5e602bff8d3ec2a29c779961bbc71ebc8e7dceee33bb8ac"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW24/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW24/matches.csv",
+          "sha256": "20c977cc9db95e374872a82e65c2800bd30b24ef291fa57a8419492cfecd0de1"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW25/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW25/playermatchstats.csv",
+          "sha256": "a110d1ed9e8992da3184d8017b49d542efd2175f4679e6012b13a00e4e82d3b6"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW25/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW25/matches.csv",
+          "sha256": "674b73371fece1d4421256dcf570c939bf5e19d24cbdc247a352290b3f0571ac"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW26/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW26/playermatchstats.csv",
+          "sha256": "cabd7204291eee2476f64852d895def78759e8172e810005330b591f41e1b1b4"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW26/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW26/matches.csv",
+          "sha256": "8d55cd022736d6d0685b9e684b4866f6c9e0f18b7271d6c96c0c9d1eeb2c8d05"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW27/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW27/playermatchstats.csv",
+          "sha256": "8212ce5851866ff63eeb9d39d6cc26eae089b92d2aa50fbb0b4e01be06741f79"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW27/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW27/matches.csv",
+          "sha256": "e3a9f5044395ef1316dfc2a8afcc156431772ae8af5c7787eaeca713b03032ed"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW28/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW28/playermatchstats.csv",
+          "sha256": "271bacad5071f68d25cb6e826750260f477f10ad1f55e5c8007e9a5e479d7d14"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW28/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW28/matches.csv",
+          "sha256": "ea4889d3ef620ff7d328f4c7b4954c07ba7a3df4a0b1877b0ac3364ee5b2575b"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW29/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW29/playermatchstats.csv",
+          "sha256": "6ceac31b185461ce316c9387a55dc6ec963544aa54c0ffb020310e982fec186d"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW29/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW29/matches.csv",
+          "sha256": "20000ecf5ccda29823abf0dce76c02762fb043e4f2e895d17e921c5a3a87c6f3"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW3/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW3/playermatchstats.csv",
+          "sha256": "fae77e1bcfab538111f4b5f8b7496546283112a73ac1c4c053baa7d74b185fe1"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW3/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW3/matches.csv",
+          "sha256": "249cadaaa3201c0171618f55d01bbb0363d76142189acacc8357abd63d329a16"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW30/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW30/playermatchstats.csv",
+          "sha256": "db90b14d5081aef55f60e9b159c6057b0703027c6fc3dbc29a21108100152d66"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW30/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW30/matches.csv",
+          "sha256": "983fd004198ec391df58f63709a937cdaf4d28ddcde19666da8870bef677c678"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW31/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW31/playermatchstats.csv",
+          "sha256": "6481381a6fc8fafb430b1c0cc351dbd58205bbd965147166e7095edf42a060c0"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW31/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW31/matches.csv",
+          "sha256": "7d5d7c2255e9f029489943c614c78e9987eb8e5ec3ac64bcd329becae54368e3"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW32/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW32/playermatchstats.csv",
+          "sha256": "be8dd521b064bf75d67c88108e2c54773e1caa006bac8285c066010c4af0ab7a"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW32/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW32/matches.csv",
+          "sha256": "d9754d7183cf5ae3dac76cc7928dcfbe9efcfffcbbd8704c0154949ba6632176"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW33/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW33/playermatchstats.csv",
+          "sha256": "e064e0d314bccd948fb41b34d65cbbe1c03cb9cc975634ef7d5c179538384cca"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW33/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW33/matches.csv",
+          "sha256": "a1eb6195bbe9ea57912c1b043d11886774add6aa4f937418537e211484b1383c"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW34/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW34/playermatchstats.csv",
+          "sha256": "c850738c91960968101fde72fd393c9e969bc53dc6d498bf0d6721c772d925b3"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW34/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW34/matches.csv",
+          "sha256": "e38aacf1c8ecf7f2ebc520d25ce2e820cb1639560bbb30d5488c48d6df652848"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW35/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW35/playermatchstats.csv",
+          "sha256": "b45136460e7e3ddae89e3ce421b4dc84c79e1c197754457a476065ffbd0ddc3c"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW35/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW35/matches.csv",
+          "sha256": "2603d16765786bf60a476d50a165e3a356ef7a64eefb825f848369788b8e2d60"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW36/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW36/playermatchstats.csv",
+          "sha256": "481e09b709e1d68913ab35b2ab563e599936ad45f03d4fa4044b391f8c656a12"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW36/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW36/matches.csv",
+          "sha256": "8e788cb4bf377487d7cdd2cbb7a66b7f28d5256078635692f992c27e0fe4a0e7"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW37/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW37/playermatchstats.csv",
+          "sha256": "9c227e1a01c1beeab13a84dfecc6883d18bc12b5a1ccfc226e507e04c22fdded"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW37/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW37/matches.csv",
+          "sha256": "fa31ff7fd0ef5481e1fa1addef722e3271d83824ffec93c62fa6b704620e8478"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW38/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW38/playermatchstats.csv",
+          "sha256": "4dd0cbe7e016d9fb3a207bb56f4716bd07a4c6b38754ada00bccc85619a1702d"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW38/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW38/matches.csv",
+          "sha256": "840942f10839da6bbe29331b8f09638ae1d25ff8322ad02dfec74566511270e9"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW4/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW4/playermatchstats.csv",
+          "sha256": "453f60b475e0e9ce34d73aa95a2803d984fadd42b48bd778180a50d7177c5f17"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW4/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW4/matches.csv",
+          "sha256": "7063fe7ddfa9ae4211f2ab5bd0dd796aea732a8b786589517db6ec8d274b3a4a"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW5/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW5/playermatchstats.csv",
+          "sha256": "5ed565becaf71351e89fb159aba06939ead9b9643c7e90592746100bd1a1ec82"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW5/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW5/matches.csv",
+          "sha256": "6f1b60a34f196224fcb4975f21d5c89996a999914689b16432981fc57ab24352"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW6/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW6/playermatchstats.csv",
+          "sha256": "73cde0b044dfe78ec4e0c8a2166deb46a4969cea65ea1f1972790146eb10152b"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW6/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW6/matches.csv",
+          "sha256": "3b134055a9b7b80a32d220b861d9f9a8e9ffad661057b856530b08b7869bfec2"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW7/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW7/playermatchstats.csv",
+          "sha256": "be659f9058b0006650700490dc73c3c45aa50ec17d3fe84a13b67ceaf289a580"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW7/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW7/matches.csv",
+          "sha256": "af487fa4e2ec16c4323eea2505c3930c6ad06e4716d9844f0c65a2117d0ad823"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW8/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW8/playermatchstats.csv",
+          "sha256": "9c719e8c598ea17c17c8c5014c820764b8b7cf20a60df924e1d8123af3d68c2e"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW8/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW8/matches.csv",
+          "sha256": "1d0930b113c8ce07d963f978f170c800b2e07253e8ec38c83118d6638811cc97"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2025-2026/By Tournament/Premier League/GW9/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW9/playermatchstats.csv",
+          "sha256": "c580bae7f6a0ccd8c9b4575055aadf8213714b52d5f76ac5383858dffdc0c4e3"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2025-2026/By Tournament/Premier League/GW9/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW9/matches.csv",
+          "sha256": "0aeb07c2e8c8cbb433faf3d37f48f4c837dc09d6a2bbd26b1d1d05942be718b5"
+        }
+      ],
+      "expected_matches": 380,
+      "expected_players": 537
+    },
+    {
+      "season": "2026/27",
+      "start_date": "2026-07-01",
+      "end_date": "2027-06-30",
+      "files": [
+        {
+          "kind": "players",
+          "path": "data/2026-2027/players.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/players.csv",
+          "sha256": "4abc1bbbb16beef2508e26b5527e90086764642c3e1f5290522c765b97e16f92"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2026-2027/By Tournament/Premier League/GW1/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW1/playermatchstats.csv",
+          "sha256": "17aadecb3d0995402f07b7d11f7e9c95e421528810449d4050e2cc25d86d00b4"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2026-2027/By Tournament/Premier League/GW1/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW1/matches.csv",
+          "sha256": "bea77c1613445eadfcacb2ce5b9ea8673db53032c931e4d38d080c24b818afcb"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2026-2027/By Tournament/Premier League/GW2/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW2/playermatchstats.csv",
+          "sha256": "d74399d3ab2778167ca39224e4c31c0d5aa8e710ffc4b4003606f4ed57fcb49a"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2026-2027/By Tournament/Premier League/GW2/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW2/matches.csv",
+          "sha256": "1c5291e0939e48a8a298f86f5194abc2e8b6026733d4262db1458a02b9c72359"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2026-2027/By Tournament/Premier League/GW3/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW3/playermatchstats.csv",
+          "sha256": "fa814aa0eb524d48462cbbf8ac60377364a7036d8dd94aa0a5e42c0fd37f1769"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2026-2027/By Tournament/Premier League/GW3/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW3/matches.csv",
+          "sha256": "703c009fbb044d349c6879231744b6db957bad05812c7b26d3ad60ab75056d3f"
+        },
+        {
+          "kind": "appearances",
+          "path": "data/2026-2027/By Tournament/Premier League/GW4/playermatchstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW4/playermatchstats.csv",
+          "sha256": "5c6e38805dfd157d940cb0d83b99bbff7ac2040e347f8b64666d0e8a94fe4a7e"
+        },
+        {
+          "kind": "matches",
+          "path": "data/2026-2027/By Tournament/Premier League/GW4/matches.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/By%20Tournament/Premier%20League/GW4/matches.csv",
+          "sha256": "355f5822e7001547e8479010144e5dda181936fa09be1fca5c7ac2831135cb2b"
+        }
+      ],
+      "expected_matches": 40,
+      "expected_players": 406
+    }
+  ],
+  "source_tournament_codes": [
+    "prem"
+  ]
+}

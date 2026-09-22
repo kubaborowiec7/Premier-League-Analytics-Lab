@@ -28,6 +28,9 @@ def main() -> None:
             page.goto(f"{args.url.rstrip('/')}/{route}")
             page.get_by_role("heading", name=title, exact=True).wait_for(timeout=30000)
             if route == "Player_Explorer":
+                # Preserve the documented M4 example when newer profile datasets exist.
+                page.get_by_label("Season", exact=True).click()
+                page.get_by_role("option", name="2023/24", exact=True).click()
                 page.get_by_label("Player", exact=True).wait_for()
                 page.get_by_label("Player", exact=True).click()
                 page.get_by_label("Player", exact=True).fill("Erling Haaland")

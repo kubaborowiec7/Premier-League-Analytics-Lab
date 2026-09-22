@@ -255,3 +255,10 @@ league adjustments.
 model bundles. `dashboard/ui.py` renders six pages without training, downloads or
 database access. The explicit `build_dashboard_data.py` CLI assembles display
 names, bootstrap intervals and the latest frozen team states; see [DASHBOARD.md](DASHBOARD.md).
+
+## Advanced multi-season player extension
+
+Published commit-pinned FPL Core CSVs pass through `data/advanced_players.py`, then
+`features/advanced_players.py` into separate prepared profile artifacts. The cached
+`dashboard/advanced_players.py` view adds role-specific radars, overlays, scatterplots
+and coverage-aware tables. It does not alter M4 archives or frozen M5–M7 models.

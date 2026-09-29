@@ -68,7 +68,9 @@
       "start_date": "2026-07-01",
       "end_date": "2027-06-30",
       "sha256": "a5bf08a220af79c2ecd2f3e51fa5f9ea6941c812c3a1f9c49b802c92e11bbd1d",
-      "expected_matches": 40
+      "expected_matches": 40,
+      "mutable_current": true,
+      "expected_canonical_sha256": "ce82653ef0f660a14380734d6e43386974c3493fac7f0d0de0c5626a99f8dd27"
     }
   ],
   "validation_start": "2024-07-01",

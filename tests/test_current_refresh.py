@@ -1,15 +1,55 @@
 """Current-source discovery, season totals and leakage-safe live artifact tests."""
 
 import json
+from pathlib import Path
 
 import httpx
 import joblib
 import pandas as pd
 
 from pl_analytics.data.advanced_players import validate_season
-from pl_analytics.data.current_sources import discover_current_player_config
+from pl_analytics.data.current_sources import discover_current_player_config, refresh_match_config
+from pl_analytics.data.football_data import SOURCE
+from pl_analytics.data.snapshots import SnapshotStore
 from pl_analytics.features.advanced_players import summarize_players
 from pl_analytics.models.live_match import build_live_match_artifacts
+
+
+def test_match_refresh_replaces_frozen_current_policy(tmp_path, monkeypatch):
+    snapshot = SnapshotStore(tmp_path / "raw").import_file(
+        Path(__file__).parent / "fixtures/matches.csv",
+        source_name=SOURCE,
+        source_url="https://example.test/current.csv",
+        dataset_version="current",
+        license_note="Generated fixture",
+    )
+    monkeypatch.setattr(
+        "pl_analytics.data.current_sources.download_season", lambda *args, **kwargs: snapshot
+    )
+    config = {
+        "competition_id": "TEST",
+        "competition_name": "Test",
+        "country": "England",
+        "source_code": "E0",
+        "timezone": "Europe/London",
+        "seasons": [
+            {
+                "season": "2023/24",
+                "source_season": "2324",
+                "start_date": "2023-07-01",
+                "end_date": "2024-06-30",
+                "sha256": "0" * 64,
+                "expected_matches": 1,
+                "mutable_current": True,
+                "expected_canonical_sha256": "0" * 64,
+            }
+        ],
+    }
+    current, archived = refresh_match_config(config, tmp_path / "raw")
+    season = current["seasons"][-1]
+    assert archived.sha256 == season["sha256"] == snapshot.sha256
+    assert season["expected_matches"] == 2
+    assert "mutable_current" not in season and "expected_canonical_sha256" not in season
 
 
 def test_current_player_discovery_resolves_one_commit_and_archives_files(tmp_path):

@@ -49,6 +49,10 @@ local refresh, run the Python command above and reload the page.
 
 - Raw payloads are never overwritten and remain ignored by Git.
 - Historical pinned seasons retain their expected-row checks.
+- The frozen M7 current-season URL is mutable. A clean reproduction may use newer
+  bytes only when the rows at its frozen cutoff still match both the expected count
+  and a canonical result-fact hash; a locally archived original snapshot remains
+  preferred.
 - Each current player refresh resolves all files to one Git commit. Season-level card
   totals use the latest published `gw` row for each player.
 - Progressive passes, progressive carries and forward-pass completion remain absent;

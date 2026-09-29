@@ -35,6 +35,8 @@ def refresh_match_config(config: dict, raw_dir: Path) -> tuple[dict, Snapshot]:
     parsed = parse_results(snapshot, scope, timezone=current["timezone"], include_shots=False)
     season["sha256"] = snapshot.sha256
     season["expected_matches"] = len(parsed.tables["matches"])
+    season.pop("mutable_current", None)
+    season.pop("expected_canonical_sha256", None)
     return current, snapshot
 
 

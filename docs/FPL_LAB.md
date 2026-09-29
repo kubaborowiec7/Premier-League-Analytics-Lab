@@ -26,6 +26,11 @@ The next refresh reads the official public entry and picks endpoints and creates
 ignored local `squad.parquet`. It never requests FPL credentials. The metadata retains
 the entry ID and team name, but no manager name.
 
+For an immediate session-only lookup, open **My team**, enter the same public ID and
+select **Load team**. This explicit action calls the two official public endpoints and
+keeps the response only in Streamlit session memory. It does not modify `.env`, raw
+snapshots or processed artifacts.
+
 ## Projection baseline
 
 For each fixture, the transparent baseline blends:

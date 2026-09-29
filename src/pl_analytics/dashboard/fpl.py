@@ -6,6 +6,7 @@ import streamlit as st
 
 from pl_analytics.config import Settings
 from pl_analytics.dashboard.data import ArtifactError, report, table
+from pl_analytics.data.fpl import fetch_public_team
 
 
 def _money(value: object) -> str:
@@ -143,12 +144,57 @@ def _captaincy(players: pd.DataFrame) -> None:
 
 def _my_team(settings: Settings, players: pd.DataFrame, metadata: dict) -> None:
     st.subheader("My team")
+    with st.form("public-fpl-team"):
+        default_id = str(settings.fpl_entry_id or st.session_state.get("fpl_entry_id", ""))
+        entered = st.text_input(
+            "Public FPL team ID",
+            value=default_id,
+            placeholder="For example: 123456",
+            help="Find this number in the URL of your FPL Points page.",
+        )
+        submitted = st.form_submit_button("Load team")
+    if submitted:
+        if not entered.strip().isdigit() or int(entered) < 1:
+            st.error("Enter a positive numeric FPL team ID.")
+        else:
+            try:
+                entry_id = int(entered)
+                entry, picks = fetch_public_team(
+                    entry_id=entry_id,
+                    event=int(metadata["current_gameweek"]),
+                )
+                loaded = picks.merge(
+                    players,
+                    left_on="element",
+                    right_on="source_player_id",
+                    validate="one_to_one",
+                )
+                if len(loaded) != 15:
+                    raise ValueError("Some squad players are absent from current artifacts")
+                st.session_state["fpl_entry_id"] = entry_id
+                st.session_state["fpl_squad"] = loaded
+                st.session_state["fpl_manager"] = {
+                    "entry_id": entry_id,
+                    "team_name": entry.get("name"),
+                    "event": metadata["current_gameweek"],
+                    "bank": entry.get("last_deadline_bank"),
+                    "team_value": entry.get("last_deadline_value"),
+                    "overall_points": entry.get("summary_overall_points"),
+                    "overall_rank": entry.get("summary_overall_rank"),
+                }
+            except ValueError:
+                st.error(
+                    "This team could not be loaded for the current gameweek. "
+                    "Check the ID and try again."
+                )
     path = settings.data_dir / "processed/fpl/squad.parquet"
-    squad = table(path)
-    manager = metadata.get("manager")
+    squad = st.session_state.get("fpl_squad")
+    if not isinstance(squad, pd.DataFrame):
+        squad = table(path)
+    manager = st.session_state.get("fpl_manager") or metadata.get("manager")
     if squad.empty or not manager:
         st.info(
-            "Optional: set FPL_ENTRY_ID to your public team ID and run the refresh. "
+            "Enter your public team ID above, or set FPL_ENTRY_ID for automatic refreshes. "
             "No FPL login or password is used."
         )
         return

@@ -69,7 +69,9 @@ view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED
 Run `python scripts/refresh_current_data.py` for an immediate update. The supplied
 GitHub Actions workflow and Windows Task Scheduler installer automate this outside
 the web process. Streamlit remains read-only and never downloads or fits on a button
-click. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
+click. The sole interactive data request is the explicit public-team lookup in FPL
+Decision Lab; it remains in session memory and sends no credentials. See
+[CURRENT_REFRESH.md](CURRENT_REFRESH.md).
 FPL Decision Lab uses separately prepared current-season projections. Its five tabs
 cover player picks, fixtures, transfers, captaincy and an optional public squad. See
 [FPL_LAB.md](FPL_LAB.md) for the projection formula and limits.

@@ -1,8 +1,36 @@
 """Fantasy planning projections and fixture context."""
 
+import httpx
 import pandas as pd
 
+from pl_analytics.data.fpl import fetch_public_team
 from pl_analytics.features.fpl import fixture_rows, latest_players, project_players
+
+
+def test_public_team_fetch_requires_complete_unique_squad():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/entry/123/"):
+            return httpx.Response(200, json={"name": "Test XI"})
+        return httpx.Response(
+            200,
+            json={
+                "picks": [
+                    {
+                        "element": player,
+                        "position": player,
+                        "multiplier": 1,
+                        "is_captain": player == 1,
+                        "is_vice_captain": player == 2,
+                    }
+                    for player in range(1, 16)
+                ]
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        entry, picks = fetch_public_team(entry_id=123, event=5, client=client)
+    assert entry["name"] == "Test XI"
+    assert len(picks) == 15 and picks.element.is_unique
 
 
 def test_fpl_projection_preserves_scope_and_fixture_horizons():

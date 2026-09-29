@@ -71,6 +71,38 @@ def download_manager_team(
     return entry, picks, sources
 
 
+def fetch_public_team(
+    *,
+    entry_id: int,
+    event: int,
+    client: httpx.Client | None = None,
+) -> tuple[dict, pd.DataFrame]:
+    """Fetch a public FPL team for an explicit interactive request without persisting it."""
+    if entry_id < 1 or event < 1:
+        raise ValueError("FPL entry and event identifiers must be positive")
+    if client is None:
+        with httpx.Client(timeout=15, follow_redirects=True) as owned:
+            return fetch_public_team(entry_id=entry_id, event=event, client=owned)
+    try:
+        entry_response = client.get(f"https://fantasy.premierleague.com/api/entry/{entry_id}/")
+        entry_response.raise_for_status()
+        picks_response = client.get(
+            f"https://fantasy.premierleague.com/api/entry/{entry_id}/event/{event}/picks/"
+        )
+        picks_response.raise_for_status()
+        entry = entry_response.json()
+        picks_payload = picks_response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        raise ValueError("The public FPL team could not be loaded") from error
+    if not isinstance(entry, dict) or not isinstance(picks_payload, dict):
+        raise ValueError("The public FPL response has an invalid format")
+    picks = pd.DataFrame(picks_payload.get("picks", []))
+    required = {"element", "position", "multiplier", "is_captain", "is_vice_captain"}
+    if len(picks) != 15 or not required <= set(picks) or picks.element.duplicated().any():
+        raise ValueError("The public FPL squad is missing or ambiguous")
+    return entry, picks
+
+
 def build_fpl_artifacts(
     config: dict,
     raw_dir: Path,

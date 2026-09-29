@@ -19,6 +19,7 @@ PAGES = [
     "1_Player_Explorer",
     "2_Scouting_Finder",
     "3_Teams",
+    "4_FPL_Decision_Lab",
     "3_Market_Value",
     "4_Match_Predictor",
     "5_Model_Lab",

@@ -27,6 +27,7 @@ PAGES = {
     "Player Explorer": "pages/1_Player_Explorer.py",
     "Scouting Finder": "pages/2_Scouting_Finder.py",
     "Teams": "pages/3_Teams.py",
+    "FPL Decision Lab": "pages/4_FPL_Decision_Lab.py",
     "Market Value": "pages/3_Market_Value.py",
     "Match Predictor": "pages/4_Match_Predictor.py",
     "Model Lab": "pages/5_Model_Lab.py",
@@ -475,6 +476,10 @@ def render(page: str = "Overview") -> None:
                 _values(frame)
         elif page == "Match Predictor":
             _match(settings, competition)
+        elif page == "FPL Decision Lab":
+            from pl_analytics.dashboard.fpl import render_fpl
+
+            render_fpl(settings, competition)
         elif page == "Model Lab":
             _lab(settings, competition)
     except ArtifactError as error:

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     )
     database_connect_timeout: int = Field(default=5, ge=1, le=60)
     football_data_api_token: SecretStr | None = None
+    fpl_entry_id: int | None = Field(default=None, ge=1)
 
     # Competition scope is configuration, not business logic.
     # V1 uses ("EPL",), but the data model must support many competitions.

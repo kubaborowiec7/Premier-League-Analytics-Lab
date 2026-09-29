@@ -1,7 +1,7 @@
 # Dashboard
 
-M8 and later extensions provide seven read-only pages: Overview, Player Explorer,
-Scouting Finder, Teams, Market Value, Match Predictor and Model Lab. Competition options are populated
+M8 and later extensions provide eight read-only pages: Overview, Player Explorer,
+Scouting Finder, Teams, FPL Decision Lab, Market Value, Match Predictor and Model Lab. Competition options are populated
 from available artifacts within `ACTIVE_COMPETITIONS`. Player and value pages
 have independent season filters; they do not imply matching historical coverage.
 
@@ -70,3 +70,6 @@ Run `python scripts/refresh_current_data.py` for an immediate update. The suppli
 GitHub Actions workflow and Windows Task Scheduler installer automate this outside
 the web process. Streamlit remains read-only and never downloads or fits on a button
 click. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
+FPL Decision Lab uses separately prepared current-season projections. Its five tabs
+cover player picks, fixtures, transfers, captaincy and an optional public squad. See
+[FPL_LAB.md](FPL_LAB.md) for the projection formula and limits.

@@ -398,3 +398,19 @@ to the source season snapshot club because match-specific membership is unavaila
 
 Suggested commit:
 `feat: add team analytics workspace`
+
+---
+
+## M14 — FPL Decision Lab
+
+User-requested extension after M13. A refresh-time FPL baseline now ranks players over
+1, 3 and 5 gameweeks using shrunk scoring rates, xG/xA, expected minutes, Elo fixture
+context, clean-sheet probability and defensive contributions. The read-only dashboard
+adds a fixture ticker, transfer comparison, captaincy shortlist and optional public-team
+import by `FPL_ENTRY_ID`. Projection uncertainty and limitations are explicit. A full
+squad/chip optimizer and historical FPL backtest remain future work.
+
+See [FPL_LAB.md](FPL_LAB.md).
+
+Suggested commit:
+`feat: add fpl decision lab`

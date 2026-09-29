@@ -237,3 +237,9 @@ payloads. Retrieval metadata, resolved commit and hashes are recorded in the ign
 operational manifest. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
 The cumulative `playerstats` snapshot provides defensive contributions from 2025/26
 onward. No value is backfilled for 2024/25.
+The FPL Decision Lab additionally uses the official public Fantasy Premier League entry
+and event-picks JSON endpoints when `FPL_ENTRY_ID` is set. These calls are optional,
+require no login and are archived with retrieval metadata. Public entry data can expose
+the team name; processed manager artifacts remain local and ignored by Git. Usage is
+subject to Premier League terms. Future fixture rows come from the same commit-pinned
+FPL-Core-Insights files as current player profiles.

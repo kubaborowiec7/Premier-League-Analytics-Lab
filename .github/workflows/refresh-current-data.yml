@@ -42,3 +42,4 @@ jobs:
             artifacts/live/
             artifacts/dashboard/live_catalog.json
             data/processed/advanced/
+            data/processed/fpl/

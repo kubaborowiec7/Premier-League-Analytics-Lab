@@ -46,6 +46,7 @@ scatterplots. Its player shortcut opens the same season and player in Player Exp
 | Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
 | Teams | Sortable squad statistics, team/league cohorts and up to five-player radar/scatter comparisons |
+| FPL Decision Lab | 1/3/5-GW picks, fixture ticker, transfer and captaincy comparisons, optional public squad |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
 | Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |
 | Model Lab | Chronological benchmark tables, selection decisions and model cards |
@@ -162,7 +163,7 @@ use the documented new output directory; do not overwrite an evaluated experimen
 Full contracts and refresh instructions: [player analytics](docs/PLAYER_ANALYTICS.md),
 [value models](docs/VALUE_MODELS.md), [statistical matches](docs/MATCH_MODELS.md),
 [match ML](docs/MATCH_ML.md), [dashboard](docs/DASHBOARD.md), and
-[current refresh](docs/CURRENT_REFRESH.md).
+[current refresh](docs/CURRENT_REFRESH.md), and [FPL Decision Lab](docs/FPL_LAB.md).
 
 For the separate PostgreSQL and exploratory notebook path:
 

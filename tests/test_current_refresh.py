@@ -106,6 +106,7 @@ def test_current_player_discovery_resolves_one_commit_and_archives_files(tmp_pat
         "matches",
         "appearances",
     }
+    assert len(result["seasons"][-1]["fixture_files"]) == 1
     assert "expected_matches" not in result["seasons"][-1]
 
 

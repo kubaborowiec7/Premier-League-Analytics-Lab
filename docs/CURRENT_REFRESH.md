@@ -13,9 +13,10 @@ appearances. Scheduled gameweeks published in advance do not enter player totals
 The resolved root team table is archived with the player files, so each refreshed
 profile keeps a source-scoped club identity and display name.
 
-The command then publishes two independent outputs:
+The command then publishes three independent outputs:
 
 - current multi-season player profiles and a metric-coverage report;
+- current FPL projections, future fixtures and an optional public squad;
 - a versioned match-inference snapshot fitted using results strictly before the UTC
   origin, plus the frozen M7 classifier and past-only team features.
 
@@ -64,3 +65,6 @@ local refresh, run the Python command above and reload the page.
 - A failed validation leaves the previous dashboard pointer and prepared player file
   in place. The command exits non-zero so Task Scheduler or Actions records failure.
 
+The same command also rebuilds FPL projections and the full future fixture ticker. If
+`FPL_ENTRY_ID` is configured, it archives the official public entry/picks responses and
+prepares a local squad view. See [FPL_LAB.md](FPL_LAB.md).

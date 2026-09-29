@@ -252,7 +252,7 @@ league adjustments.
 ## Dashboard artifact boundary
 
 `dashboard/data.py` caches and validates local prepared tables and checksum-pinned
-model bundles. `dashboard/ui.py` renders seven pages without training, downloads or
+model bundles. `dashboard/ui.py` renders eight pages without training, downloads or
 database access. The explicit `build_dashboard_data.py` CLI assembles display
 names, bootstrap intervals and the latest frozen team states; see [DASHBOARD.md](DASHBOARD.md).
 
@@ -274,3 +274,6 @@ rows, rebuilds player profiles and fits a versioned statistical match snapshot u
 only results before its origin. The frozen M6/M7 reports remain the evaluation record.
 Streamlit reads `live_catalog.json` only after all referenced files exist and verifies
 their hashes and shared origin. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
+`features/fpl.py` creates a scoped player snapshot, expands future fixtures and applies
+the transparent rate/Elo projection baseline. `data/fpl.py` builds portable FPL tables;
+`dashboard/fpl.py` reads them without network access or request-time fitting.

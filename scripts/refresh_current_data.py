@@ -14,6 +14,7 @@ from pl_analytics.data.current_sources import (
     discover_current_player_config,
     refresh_match_config,
 )
+from pl_analytics.data.fpl import build_fpl_artifacts
 from pl_analytics.data.match_history import read_match_history
 from pl_analytics.features.advanced_players import METRICS, summarize_players
 from pl_analytics.models.live_match import build_live_match_artifacts
@@ -85,6 +86,12 @@ def main() -> None:
         reference_date=origin.date().isoformat(),
     )
     profiles, coverage = _profiles(player_config, settings.data_dir / "raw")
+    fpl = build_fpl_artifacts(
+        player_config,
+        settings.data_dir / "raw",
+        settings.data_dir / "processed/fpl",
+        entry_id=settings.fpl_entry_id,
+    )
 
     refreshed_at = now.isoformat()
     live = build_live_match_artifacts(
@@ -118,15 +125,17 @@ def main() -> None:
         "match_sources": match_sources,
         "player_source_commit": player_config["commit"],
         "player_reference_date": player_config["reference_date"],
+        "fpl": fpl,
     }
     source_path = settings.artifact_dir / "live/source_manifest.json"
     source_path.parent.mkdir(parents=True, exist_ok=True)
     source_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     logging.info(
-        "Current data refreshed: origin=%s, last_result=%s, profiles=%d",
+        "Current data refreshed: origin=%s, last_result=%s, profiles=%d, FPL players=%d",
         live["origin"],
         live["last_result_date"],
         len(profiles),
+        fpl["players"],
     )
 
 

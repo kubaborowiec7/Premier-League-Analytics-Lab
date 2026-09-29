@@ -101,6 +101,7 @@ def discover_current_player_config(
 
     store = SnapshotStore(raw_dir)
     files: list[dict[str, str]] = []
+    fixture_files: list[dict[str, str]] = []
 
     def archive(path: str, kind: str) -> Snapshot:
         url = f"https://raw.githubusercontent.com/{repository}/{commit}/{quote(path, safe='/')}"
@@ -118,6 +119,7 @@ def discover_current_player_config(
         archive(path, candidates[path])
     for path in sorted(path for path, kind in candidates.items() if kind == "matches"):
         snapshot = archive(path, "matches")
+        fixture_files.append(files[-1].copy())
         match_rows = pd.read_csv(snapshot.path)
         if "finished" not in match_rows:
             raise ValueError(f"Current match file has no finished flag: {path}")
@@ -130,6 +132,7 @@ def discover_current_player_config(
             raise ValueError(f"Completed gameweek has no player appearances: {path}")
         archive(appearance_path, "appearances")
     season["files"] = files
+    season["fixture_files"] = fixture_files
     # The publisher creates all gameweek files before their fixtures are played.
     # The loader may ignore those scheduled matches while historical snapshots
     # continue to require every referenced match to be complete.

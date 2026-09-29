@@ -83,6 +83,7 @@ def discover_current_player_config(
     root_files = {
         f"data/{folder}/players.csv": "players",
         f"data/{folder}/playerstats.csv": "playerstats",
+        f"data/{folder}/teams.csv": "teams",
     }
     candidates: dict[str, str] = {}
     for item in tree.get("tree", []):
@@ -94,7 +95,7 @@ def discover_current_player_config(
         elif found := per_gameweek.match(path):
             candidates[path] = "matches" if found.group(1) == "matches" else "appearances"
     if not root_files.keys() <= candidates.keys():
-        raise ValueError("Current player identity or season-total file is missing")
+        raise ValueError("Current player, team or season-total file is missing")
     if "matches" not in candidates.values() or "appearances" not in candidates.values():
         raise ValueError("Current player match files are missing")
 

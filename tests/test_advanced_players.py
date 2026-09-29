@@ -26,6 +26,9 @@ def observations():
                         player_id=f"{role}{player}",
                         player_name=f"{role} Player {player}",
                         position_group=role,
+                        club_id="club-a" if player < 3 else "club-b",
+                        club_name="Club A" if player < 3 else "Club B",
+                        club_short_name="CLA" if player < 3 else "CLB",
                         season=season,
                         competition_id="TEST",
                         minutes=90.0,
@@ -96,6 +99,23 @@ def test_peer_groups_and_direction_do_not_mix_seasons_or_roles(observations):
     assert "goals" not in PROFILES["DEF"] and "assists" not in PROFILES["DEF"]
 
 
+def test_team_cohort_percentiles_follow_filtered_membership(observations):
+    from pl_analytics.features.advanced_players import cohort_percentiles
+
+    profiles = summarize_players(observations, "2027-01-01")
+    cohort = profiles.loc[
+        profiles.season.eq("2024/25")
+        & profiles.club_id.eq("club-a")
+        & profiles.position_group.eq("DEF")
+    ]
+    ranked = cohort_percentiles(cohort, metrics=("tackles", "fouls_committed"))
+    target = ranked.loc[ranked.player_id.eq("DEF0")].iloc[0]
+    assert target.tackles_cohort_peers == 3
+    assert target.tackles_cohort_percentile == pytest.approx(100 / 6)
+    assert target.fouls_committed_cohort_percentile == pytest.approx(100 - 100 / 6)
+    assert "club_id=club-a" in target.cohort_normalization_context
+
+
 def test_radar_has_distinct_colors_common_axes_and_missing_gaps(observations):
     ranked = peer_percentiles(summarize_players(observations, "2027-01-01"))
     metrics = ["tackles", "interceptions", "clearances"]
@@ -110,8 +130,18 @@ def test_radar_has_distinct_colors_common_axes_and_missing_gaps(observations):
 
 def test_source_adapter_rejects_ambiguous_or_invalid_data():
     players = pd.DataFrame(
-        [dict(player_id=1, player_code=42, first_name="A", second_name="B", position="Defender")]
+        [
+            dict(
+                player_id=1,
+                player_code=42,
+                first_name="A",
+                second_name="B",
+                position="Defender",
+                team_code=3,
+            )
+        ]
     )
+    teams = pd.DataFrame([dict(code=3, name="Arsenal", short_name="ARS")])
     matches = pd.DataFrame(
         [dict(match_id="m", kickoff_time="2025-01-01", finished=True, tournament="prem")]
     )
@@ -124,8 +154,11 @@ def test_source_adapter_rejects_ambiguous_or_invalid_data():
         "position_map": {"Defender": "DEF"},
     }
     season = {"season": "2024/25", "start_date": "2024-07-01", "end_date": "2025-06-30"}
-    result = validate_season(players, matches, appearances, config=config, season=season)
+    result = validate_season(
+        players, matches, appearances, config=config, season=season, teams=teams
+    )
     assert result.player_id.iloc[0] == "fpl:42" and result.position_group.iloc[0] == "DEF"
+    assert result.club_id.iloc[0] == "fpl:club:3" and result.club_name.iloc[0] == "Arsenal"
     assert pd.isna(result.xg.iloc[0])
     for column, value in [
         ("minutes_played", -1),
@@ -136,14 +169,32 @@ def test_source_adapter_rejects_ambiguous_or_invalid_data():
         changed = appearances.copy()
         changed[column] = value
         with pytest.raises(ValueError):
-            validate_season(players, matches, changed, config=config, season=season)
+            validate_season(
+                players, matches, changed, config=config, season=season, teams=teams
+            )
     with pytest.raises(ValueError, match="Duplicate"):
         validate_season(
-            players, matches, pd.concat([appearances, appearances]), config=config, season=season
+            players,
+            matches,
+            pd.concat([appearances, appearances]),
+            config=config,
+            season=season,
+            teams=teams,
         )
     matches["tournament"] = "cup"
     with pytest.raises(ValueError, match="competition"):
-        validate_season(players, matches, appearances, config=config, season=season)
+        validate_season(
+            players, matches, appearances, config=config, season=season, teams=teams
+        )
+    with pytest.raises(ValueError, match="unknown team"):
+        validate_season(
+            players.assign(team_code=999),
+            matches.assign(tournament="prem"),
+            appearances,
+            config=config,
+            season=season,
+            teams=teams,
+        )
 
 
 def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, monkeypatch):
@@ -174,3 +225,8 @@ def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, m
     app.number_input[0].set_value(1000).run(timeout=30)
     assert not app.error and not app.exception
     assert any("three shared eligible metrics" in item.value for item in app.info)
+    app.switch_page("pages/3_Teams.py").run(timeout=30)
+    assert not app.error and not app.exception
+    assert next(s for s in app.selectbox if s.label == "Season").value == "2025/26"
+    assert len(app.dataframe[0].value) == 12
+    assert any("Click any column header" in item.value for item in app.caption)

@@ -137,6 +137,12 @@ def summarize_players(appearances: pd.DataFrame, reference_date: str) -> pd.Data
         row.update(
             player_name=group.player_name.iloc[0],
             position_group=group.position_group.iloc[0],
+            club_id=group.club_id.iloc[0] if "club_id" in group else pd.NA,
+            club_name=group.club_name.iloc[0] if "club_name" in group else pd.NA,
+            club_short_name=(
+                group.club_short_name.iloc[0] if "club_short_name" in group else pd.NA
+            ),
+            club_context="Season player snapshot; transfers are not split by club",
             position_context="FPL season snapshot; broad role, not verified match position",
             minutes=float(group.minutes.sum()),
             appearances=len(group),
@@ -223,4 +229,49 @@ def peer_percentiles(
     result["normalization_context"] = (
         result.competition_id + "|" + result.season + "|" + result.position_group
     )
+    return result
+
+
+def cohort_percentiles(
+    frame: pd.DataFrame,
+    *,
+    metrics: tuple[str, ...] | None = None,
+    min_minutes: int = 1,
+    min_coverage: float = 0.9,
+    min_peers: int = 2,
+) -> pd.DataFrame:
+    """Rank a caller-defined comparison cohort without changing its membership.
+
+    The dashboard uses this for a selected squad after its season, club and optional
+    position filters have been applied. League role percentiles remain the canonical
+    cross-club comparison produced by :func:`peer_percentiles`.
+    """
+    selected = tuple(METRICS) if metrics is None else metrics
+    unknown = set(selected) - set(METRICS)
+    if unknown:
+        raise ValueError(f"Unknown metrics: {sorted(unknown)}")
+    result = frame.copy()
+    context_parts = []
+    for column in ("competition_id", "season", "club_id", "position_group"):
+        if column in result:
+            values = sorted(result[column].dropna().astype(str).unique())
+            context_parts.append(f"{column}={','.join(values)}")
+    result["cohort_normalization_context"] = "|".join(context_parts)
+    for name in selected:
+        metric = METRICS[name]
+        valid = (
+            result.minutes.ge(min_minutes)
+            & result[f"{name}_coverage"].ge(min_coverage)
+            & result[f"{name}_per90"].notna()
+        )
+        indices = result.index[valid]
+        result[f"{name}_cohort_peers"] = len(indices)
+        result[f"{name}_cohort_percentile"] = np.nan
+        if len(indices) < min_peers:
+            continue
+        values = result.loc[indices, f"{name}_per90"]
+        ranks = (values.rank(method="average") - 0.5) / len(values) * 100
+        result.loc[indices, f"{name}_cohort_percentile"] = (
+            100 - ranks if metric.lower_better else ranks
+        )
     return result

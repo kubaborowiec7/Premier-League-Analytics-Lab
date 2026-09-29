@@ -222,7 +222,7 @@ enabled by supplying the correct source mapping rather than copying the entire l
 ## Advanced player statistics: FPL Core published snapshots
 
 The extension uses [olbauday/FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights)
-CSV exports at commit `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb`, pinned with 89 file
+CSV exports at commit `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb`, pinned with 92 file
 hashes in `data/manifests/advanced_players.json`. Coverage: 2024/25, 2025/26 and
 40 matches of 2026/27. The publisher permits reuse with attribution requested;
 upstream-provider rights are not independently granted here. No underlying sports
@@ -230,7 +230,7 @@ website is scraped. Snapshots retain retrieval metadata and remain outside Git.
 See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md) for metric definitions and gaps.
 
 For ongoing current-season updates, `refresh_current_data.py` resolves `main` to one
-commit before downloading any FPL Core files. It archives root player/playerstats
+commit before downloading any FPL Core files. It archives root player/playerstats/team
 files and only gameweeks containing a completed fixture. Football-Data's current E0
 URL is also archived by content hash on every run. Mutable URLs never overwrite prior
 payloads. Retrieval metadata, resolved commit and hashes are recorded in the ignored

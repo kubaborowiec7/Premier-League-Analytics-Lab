@@ -25,6 +25,12 @@
           "sha256": "be331f2349cba22cc8fbf5f432ebc152b6c325054e4faa2683d65c336a8143b3"
         },
         {
+          "kind": "teams",
+          "path": "data/2024-2025/teams/teams.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2024-2025/teams/teams.csv",
+          "sha256": "0ccbb0191e810b9955f60ac8b7d65fe0a9d545af5f7308a6e5eaf6a2349bb4d9"
+        },
+        {
           "kind": "matches",
           "path": "data/2024-2025/matches/matches.csv",
           "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2024-2025/matches/matches.csv",
@@ -50,6 +56,12 @@
           "path": "data/2025-2026/players.csv",
           "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/players.csv",
           "sha256": "20621e5a365a5ab5ed4f787345b75975f2b32e79fab5d219235c6060084ccee4"
+        },
+        {
+          "kind": "teams",
+          "path": "data/2025-2026/teams.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/teams.csv",
+          "sha256": "8bf02fae3e246d6540a925ff4c1011d9656a8dad20ec19545dbfefb741cb93ce"
         },
         {
           "kind": "appearances",
@@ -521,6 +533,12 @@
           "path": "data/2026-2027/players.csv",
           "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/players.csv",
           "sha256": "4abc1bbbb16beef2508e26b5527e90086764642c3e1f5290522c765b97e16f92"
+        },
+        {
+          "kind": "teams",
+          "path": "data/2026-2027/teams.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2026-2027/teams.csv",
+          "sha256": "f13e3f793b4a6770bda339d4e292877cea33edd0f2acf1309349a7eec8e0aada"
         },
         {
           "kind": "appearances",

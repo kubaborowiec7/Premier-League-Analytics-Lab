@@ -15,7 +15,8 @@ Subsequent offline builds omit `--download`. The manifest
 `data/manifests/advanced_players.json` pins Git commit
 `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb` of
 [olbauday/FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights),
-89 CSV files and their SHA-256 hashes. It downloads only published GitHub CSVs,
+92 CSV files and their SHA-256 hashes. The additional season team tables map source
+`team_code` values to canonical `fpl:club:*` identities and display names. It downloads only published GitHub CSVs,
 never underlying sports sites. Immutable payloads and retrieval metadata live under
 `data/raw/fpl-core.*`; derived files live under `data/processed/advanced/`.
 
@@ -73,7 +74,8 @@ Some otherwise supported metrics are missing entirely from the newest snapshot.
 
 Positions are broad FPL season labels: GK, DEF, MID, FWD. DEF includes centre-backs
 and full-backs. Historical roles, age and match-specific club membership are not
-inferred from a current profile. No possession or competition-strength adjustment
+inferred from a current profile. Each season uses the player's season snapshot club;
+transfers are not split by club. No possession or competition-strength adjustment
 is invented.
 
 ## Interface
@@ -92,12 +94,19 @@ The dark performance panels switch between totals and per 90 while percentage
 metrics retain their units. Tables show per-metric coverage and peer ranks.
 `P80` means the 80th percentile in the documented peer cohort.
 
+Teams uses the same metric registry and adds a sortable squad table. Users can filter
+by season, club, role and minutes, switch between totals and per 90, and choose a
+role-matched league percentile or a percentile within the filtered squad. Radar and
+scatter comparisons support up to five squad players. A player shortcut passes the
+selected season and stable player ID to Player Explorer.
+
 ![Three-defender radar comparison](screenshots/defender-comparison.png)
 ![Observed per-90 season performance](screenshots/advanced-statistics.png)
 
 ## Output schema and refresh
 
 `player_profiles.parquet` contains identity, competition, season, player name,
+season snapshot club ID/name/short name and club-context warning,
 position/context, minutes, appearances, reference date, last match date, source,
 and for each registry metric: raw/derived total or percentage, `_per90`, `_coverage`.
 `coverage.json` records source commit, reference date, season counts and non-missing

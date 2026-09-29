@@ -10,6 +10,8 @@ The command resolves the latest published FPL Core commit, archives every downlo
 CSV by SHA-256, downloads the mutable current-season Football-Data CSV into the same
 immutable store, and validates both sources. It includes only completed fixtures and
 appearances. Scheduled gameweeks published in advance do not enter player totals.
+The resolved root team table is archived with the player files, so each refreshed
+profile keeps a source-scoped club identity and display name.
 
 The command then publishes two independent outputs:
 

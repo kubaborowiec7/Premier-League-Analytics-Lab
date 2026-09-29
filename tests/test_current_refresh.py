@@ -57,14 +57,16 @@ def test_current_player_discovery_resolves_one_commit_and_archives_files(tmp_pat
     paths = [
         "data/2026-2027/players.csv",
         "data/2026-2027/playerstats.csv",
+        "data/2026-2027/teams.csv",
         "data/2026-2027/By Tournament/Premier League/GW1/matches.csv",
         "data/2026-2027/By Tournament/Premier League/GW1/playermatchstats.csv",
     ]
     payloads = {
         paths[0]: b"player_id,player_code\n1,10\n",
         paths[1]: b"id,yellow_cards,red_cards\n1,2,0\n",
-        paths[2]: b"match_id,kickoff_time,finished,tournament\nm,2026-08-01,true,prem\n",
-        paths[3]: b"player_id,match_id,minutes_played,duels_lost\n1,m,90,0\n",
+        paths[2]: b"code,name,short_name\n3,Arsenal,ARS\n",
+        paths[3]: b"match_id,kickoff_time,finished,tournament\nm,2026-08-01,true,prem\n",
+        paths[4]: b"player_id,match_id,minutes_played,duels_lost\n1,m,90,0\n",
     }
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -100,6 +102,7 @@ def test_current_player_discovery_resolves_one_commit_and_archives_files(tmp_pat
     assert {item["kind"] for item in result["seasons"][-1]["files"]} == {
         "players",
         "playerstats",
+        "teams",
         "matches",
         "appearances",
     }

@@ -18,6 +18,7 @@ APP = Path(__file__).resolve().parents[1] / "app/Home.py"
 PAGES = [
     "1_Player_Explorer",
     "2_Scouting_Finder",
+    "3_Teams",
     "3_Market_Value",
     "4_Match_Predictor",
     "5_Model_Lab",

@@ -14,7 +14,7 @@ def load_season(
 ) -> pd.DataFrame:
     """Validate source identity, season-local IDs and dated match joins before aggregation."""
     tables: dict[str, list[pd.DataFrame]] = {
-        kind: [] for kind in ("players", "matches", "appearances", "playerstats")
+        kind: [] for kind in ("players", "teams", "matches", "appearances", "playerstats")
     }
     store = SnapshotStore(raw_dir)
     for entry in season["files"]:
@@ -39,6 +39,7 @@ def load_season(
         *(pd.concat(tables[k], ignore_index=True) for k in ("players", "matches", "appearances")),
         config=config,
         season=season,
+        teams=pd.concat(tables["teams"], ignore_index=True) if tables["teams"] else None,
         playerstats=(
             pd.concat(tables["playerstats"], ignore_index=True)
             if tables["playerstats"]
@@ -54,6 +55,7 @@ def validate_season(
     *,
     config: dict,
     season: dict,
+    teams: pd.DataFrame | None = None,
     playerstats: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Fail on ambiguous joins and invalid values; retain absent metrics as NaN."""
@@ -124,7 +126,29 @@ def validate_season(
     appearances["duels_lost"] = pd.to_numeric(appearances.duels_lost, errors="raise")
     if appearances.duels_lost.dropna().lt(0).any():
         raise ValueError("Negative lost duels")
-    profiles = players[["player_id", "first_name", "second_name", "position", "player_code"]]
+    profile_columns = ["player_id", "first_name", "second_name", "position", "player_code"]
+    if teams is not None:
+        required_team_columns = {"code", "name", "short_name"}
+        if not required_team_columns <= set(teams) or teams["code"].isna().any():
+            raise ValueError("Invalid team snapshot")
+        if teams["code"].duplicated().any():
+            raise ValueError("Duplicate team codes")
+        if "team_code" not in players or players["team_code"].isna().any():
+            raise ValueError("Player team identity is missing")
+        team_lookup = teams[["code", "name", "short_name"]].rename(
+            columns={"code": "team_code", "name": "club_name", "short_name": "club_short_name"}
+        )
+        profiles = players[[*profile_columns, "team_code"]].merge(
+            team_lookup, on="team_code", how="left", validate="many_to_one"
+        )
+        if profiles.club_name.isna().any():
+            raise ValueError("Player references an unknown team")
+        profiles["club_id"] = "fpl:club:" + profiles.team_code.astype(int).astype(str)
+    else:
+        profiles = players[profile_columns].copy()
+        profiles["club_id"] = pd.NA
+        profiles["club_name"] = pd.NA
+        profiles["club_short_name"] = pd.NA
     result = appearances.merge(
         matches[["match_id", "match_date"]], on="match_id", validate="many_to_one"
     )

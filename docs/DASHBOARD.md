@@ -1,7 +1,7 @@
 # Dashboard
 
-M8 provides six read-only pages: Overview, Player Explorer, Scouting Finder,
-Market Value, Match Predictor and Model Lab. Competition options are populated
+M8 and later extensions provide seven read-only pages: Overview, Player Explorer,
+Scouting Finder, Teams, Market Value, Match Predictor and Model Lab. Competition options are populated
 from available artifacts within `ACTIVE_COMPETITIONS`. Player and value pages
 have independent season filters; they do not imply matching historical coverage.
 
@@ -22,6 +22,13 @@ prior-only feature summaries used by M7. Each club has one state at the latest
 evaluated monthly origin. The catalog records that date and SHA-256 model hashes.
 Player intervals retain player, competition, season and metric. They resample
 recorded appearances; they are not prospective prediction intervals.
+
+Teams uses the advanced FPL Core profiles only. It defaults to 2026/27 when that
+season exists and offers every available advanced season. The squad table can show
+all supported metrics or one metric family, with Total/Per-90 values and native
+two-direction column sorting. League ranks use competition/season/broad-position
+peers; Team ranks use the currently filtered squad. The source player snapshot assigns
+one club per season, so transfers are not split into separate club totals.
 
 The app caches tables/reports by path and content hash, and trusted model
 bundles by checksum (verified on every load request). It never fits, downloads or connects
@@ -52,7 +59,7 @@ competition filters, player/scouting interaction, corrupt files and probability 
 ## Advanced player comparison
 
 Run `python scripts/build_advanced_players.py --download` to add 2024/25, 2025/26
-and partial 2026/27 profiles. Player Explorer and Scouting Finder then expose
+and partial 2026/27 profiles. Player Explorer, Scouting Finder and Teams then expose
 role-specific radar overlays (up to five players), cross-season comparisons,
 selectable scatterplot axes and dark Total/Per-90 performance panels. The 2023/24
 view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md).

@@ -1,7 +1,7 @@
 # Premier League Analytics Lab
 
 A reproducible football analytics platform: **player performance, scouting, editorial
-market-value estimation and probabilistic match forecasting**, presented in a six-page
+market-value estimation and probabilistic match forecasting**, presented in a seven-page
 Streamlit dashboard. Python and PostgreSQL pipelines retain source provenance and
 competition/season context; chronological experiments compare simple baselines with ML.
 
@@ -30,6 +30,10 @@ The published source covers most requested shooting/passing/possession/defensive
 metrics, with meaningful gaps in the newest season. Progressive passes/carries and
 several other fields remain explicitly unavailable. [Definitions and reproduction](docs/ADVANCED_PLAYERS.md).
 
+The Teams workspace adds a sortable all-statistics squad table, Total/Per-90 values,
+team or role-matched league percentiles, five-player radar overlays and peer
+scatterplots. Its player shortcut opens the same season and player in Player Explorer.
+
 ![Defender radar comparison](docs/screenshots/defender-comparison.png)
 
 ## What you can explore
@@ -39,6 +43,7 @@ several other fields remain explicitly unavailable. [Definitions and reproductio
 | Overview | Data-driven competition selector and coverage by module |
 | Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
+| Teams | Sortable squad statistics, team/league cohorts and up to five-player radar/scatter comparisons |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
 | Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |
 | Model Lab | Chronological benchmark tables, selection decisions and model cards |

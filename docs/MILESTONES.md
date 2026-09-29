@@ -384,3 +384,17 @@ See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
 
 Suggested commit:
 `feat: automate current football data refresh`
+
+---
+
+## M13 — Team analytics workspace
+
+User-requested extension after M12. Advanced profiles now retain the season snapshot
+club from a checksum-pinned team table. The Teams page provides every available
+advanced season (2026/27 by default), sortable squad statistics, Total/Per-90 values,
+position and exposure filters, explicit Team/League percentile cohorts, five-player
+radars, peer scatterplots and a Player Explorer shortcut. Transfers remain assigned
+to the source season snapshot club because match-specific membership is unavailable.
+
+Suggested commit:
+`feat: add team analytics workspace`

@@ -26,6 +26,7 @@ PAGES = {
     "Overview": "Home.py",
     "Player Explorer": "pages/1_Player_Explorer.py",
     "Scouting Finder": "pages/2_Scouting_Finder.py",
+    "Teams": "pages/3_Teams.py",
     "Market Value": "pages/3_Market_Value.py",
     "Match Predictor": "pages/4_Match_Predictor.py",
     "Model Lab": "pages/5_Model_Lab.py",
@@ -69,7 +70,10 @@ MODEL_PRESENTATION = {
 
 
 def _season(frame: pd.DataFrame) -> pd.DataFrame:
-    selected = st.selectbox("Season", sorted(frame.season.unique(), reverse=True))
+    seasons = sorted(frame.season.unique(), reverse=True)
+    requested = st.query_params.get("season")
+    index = seasons.index(requested) if requested in seasons else 0
+    selected = st.selectbox("Season", seasons, index=index)
     return frame.loc[frame.season.eq(selected)]
 
 
@@ -450,7 +454,7 @@ def render(page: str = "Overview") -> None:
             _overview(tables)
         elif competition is None:
             _missing()
-        elif page in ("Player Explorer", "Scouting Finder", "Market Value"):
+        elif page in ("Player Explorer", "Scouting Finder", "Teams", "Market Value"):
             frame = tables["values" if page == "Market Value" else "players"]
             if frame.empty:
                 _missing()
@@ -458,6 +462,15 @@ def render(page: str = "Overview") -> None:
                 _players(frame, settings)
             elif page == "Scouting Finder":
                 _scouting(frame, all_players)
+            elif page == "Teams":
+                from pl_analytics.dashboard.teams import render_teams
+
+                advanced = frame.loc[
+                    frame.get("source", pd.Series(index=frame.index, dtype=object)).eq(
+                        "FPL-Core-Insights"
+                    )
+                ]
+                render_teams(advanced)
             else:
                 _values(frame)
         elif page == "Match Predictor":

@@ -127,8 +127,14 @@ def render_advanced(
         & ranked.competition_id.eq(frame.competition_id.iloc[0])
     ]
     names = current.set_index("player_id").player_name.to_dict()
+    requested_player = st.query_params.get("player")
+    player_options = sorted(names, key=lambda key: names[key])
+    player_index = player_options.index(requested_player) if requested_player in names else 0
     selected_id = st.selectbox(
-        "Player", sorted(names, key=lambda key: names[key]), format_func=lambda key: names[key]
+        "Player",
+        player_options,
+        index=player_index,
+        format_func=lambda key: names[key],
     )
     primary = current.loc[current.player_id.eq(selected_id)].iloc[0]
     universe = ranked.loc[ranked.position_group.eq(role)].copy()

@@ -252,7 +252,7 @@ league adjustments.
 ## Dashboard artifact boundary
 
 `dashboard/data.py` caches and validates local prepared tables and checksum-pinned
-model bundles. `dashboard/ui.py` renders six pages without training, downloads or
+model bundles. `dashboard/ui.py` renders seven pages without training, downloads or
 database access. The explicit `build_dashboard_data.py` CLI assembles display
 names, bootstrap intervals and the latest frozen team states; see [DASHBOARD.md](DASHBOARD.md).
 
@@ -262,6 +262,9 @@ Published commit-pinned FPL Core CSVs pass through `data/advanced_players.py`, t
 `features/advanced_players.py` into separate prepared profile artifacts. The cached
 `dashboard/advanced_players.py` view adds role-specific radars, overlays, scatterplots
 and coverage-aware tables. It does not alter M4 archives or frozen M5–M7 models.
+The separate `dashboard/teams.py` view consumes the same prepared profiles, retaining
+competition, season and source club identity while defining league and filtered-squad
+comparison cohorts explicitly.
 
 ## Operational refresh boundary
 

@@ -14,7 +14,7 @@ def load_season(
 ) -> pd.DataFrame:
     """Validate source identity, season-local IDs and dated match joins before aggregation."""
     tables: dict[str, list[pd.DataFrame]] = {
-        kind: [] for kind in ("players", "matches", "appearances")
+        kind: [] for kind in ("players", "matches", "appearances", "playerstats")
     }
     store = SnapshotStore(raw_dir)
     for entry in season["files"]:
@@ -39,6 +39,11 @@ def load_season(
         *(pd.concat(tables[k], ignore_index=True) for k in ("players", "matches", "appearances")),
         config=config,
         season=season,
+        playerstats=(
+            pd.concat(tables["playerstats"], ignore_index=True)
+            if tables["playerstats"]
+            else None
+        ),
     )
 
 
@@ -49,6 +54,7 @@ def validate_season(
     *,
     config: dict,
     season: dict,
+    playerstats: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Fail on ambiguous joins and invalid values; retain absent metrics as NaN."""
     players, matches, appearances = players.copy(), matches.copy(), appearances.copy()
@@ -76,11 +82,34 @@ def validate_season(
     ):
         raise ValueError("Unexpected source competition")
     finished = matches.finished.astype(str).str.lower().isin(["true", "1"])
-    if not finished.all():
+    if season.get("completed_matches_only"):
+        matches = matches.loc[finished].copy()
+        appearances = appearances.loc[appearances.match_id.isin(matches.match_id)].copy()
+        if matches.empty or appearances.empty:
+            raise ValueError("Current player snapshot has no completed appearances")
+    elif not finished.all():
         raise ValueError("Advanced appearances must reference completed matches")
     appearances["minutes"] = pd.to_numeric(appearances.minutes_played, errors="raise")
     if not appearances.minutes.between(0, 130).all():
         raise ValueError("Invalid appearance minutes")
+    if playerstats is not None:
+        totals = playerstats.copy()
+        required = {"id", "yellow_cards", "red_cards"}
+        if not required <= set(totals) or totals.id.isna().any():
+            raise ValueError("Invalid player season totals")
+        if totals.id.duplicated().any():
+            if "gw" not in totals or pd.to_numeric(totals.gw, errors="coerce").isna().any():
+                raise ValueError("Repeated player season totals have no valid gameweek")
+            totals["gw"] = pd.to_numeric(totals.gw, errors="raise")
+            totals = totals.sort_values("gw").drop_duplicates("id", keep="last")
+        totals = totals[["id", "yellow_cards", "red_cards"]].rename(columns={"id": "player_id"})
+        for name in ("yellow_cards", "red_cards"):
+            totals[name] = pd.to_numeric(totals[name], errors="raise")
+            if totals[name].dropna().lt(0).any():
+                raise ValueError(f"Invalid metric: {name}")
+        appearances = appearances.drop(
+            columns=["yellow_cards", "red_cards"], errors="ignore"
+        ).merge(totals, on="player_id", how="left", validate="many_to_one")
     for name, metric in METRICS.items():
         if metric.kind == "ratio":
             continue

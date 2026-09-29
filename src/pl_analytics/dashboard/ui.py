@@ -14,6 +14,7 @@ from pl_analytics.dashboard.data import (
     ArtifactError,
     available_competitions,
     catalog,
+    model_clubs,
     prepared_models,
     report,
     scenario,
@@ -28,6 +29,42 @@ PAGES = {
     "Market Value": "pages/3_Market_Value.py",
     "Match Predictor": "pages/4_Match_Predictor.py",
     "Model Lab": "pages/5_Model_Lab.py",
+}
+
+MODEL_PRESENTATION = {
+    "base_rate": (
+        "League baseline",
+        "Historical home/draw/away frequencies. It is the simplest reference model.",
+    ),
+    "elo_k20": (
+        "Elo — steady",
+        "Updates club strength after each result and reacts gradually to new matches.",
+    ),
+    "elo_k40": (
+        "Elo — responsive",
+        "Uses the same rating system with larger updates, so recent results matter more quickly.",
+    ),
+    "poisson_flat": (
+        "Poisson",
+        "Estimates home and away goal rates from attack, defence and home advantage.",
+    ),
+    "poisson_half365": (
+        "Poisson — recent",
+        "Poisson goal model with match weights halving every 365 days.",
+    ),
+    "dixon_coles_flat": (
+        "Dixon–Coles",
+        "Poisson model with a dependence correction for low scorelines such as 0–0 and 1–1.",
+    ),
+    "dixon_coles_half365": (
+        "Dixon–Coles — recent",
+        "Low-score correction plus greater weight for recent matches; the preferred score model.",
+    ),
+    "calibrated_ml": (
+        "Logistic ML",
+        "Calibrated outcome model using Elo and each club's five-match form. "
+        "It does not predict scores.",
+    ),
 }
 
 
@@ -278,13 +315,19 @@ def _match(settings, competition: str) -> None:
     if len(states) < 2:
         st.info("At least two prepared clubs are required for this competition.")
         return
-    names = table(settings.artifact_dir / "dashboard/clubs.parquet")
+    names = model_clubs(settings, metadata)
     names = names.loc[names.competition_id.eq(competition)].set_index("club_id")["name"].to_dict()
     clubs = sorted(states.club_id.unique(), key=lambda club: names.get(club, club))
-    st.info(
-        f"Frozen features and models as of {metadata['origin']}. "
-        "This is a hypothetical fixture at that origin, not a live forecast."
-    )
+    if metadata.get("mode") == "operational":
+        st.info(
+            f"Current snapshot: results through {metadata['last_result_date']}; "
+            f"model origin {metadata['origin']}. Refreshed {metadata['refreshed_at']}."
+        )
+    else:
+        st.info(
+            f"Frozen features and models as of {metadata['origin']}. "
+            "This is a hypothetical fixture at that origin, not a live forecast."
+        )
     home = st.selectbox("Home club", clubs, format_func=lambda club: names.get(club, club))
     away = st.selectbox(
         "Away club",
@@ -296,7 +339,9 @@ def _match(settings, competition: str) -> None:
         "Model",
         models,
         index=models.index("dixon_coles_half365") if "dixon_coles_half365" in models else 0,
+        format_func=lambda name: MODEL_PRESENTATION.get(name, (name, ""))[0],
     )
+    st.caption(MODEL_PRESENTATION.get(model, (model, "No description available."))[1])
     if st.button("Predict match", type="primary"):
         result = scenario(home, away, competition, model, statistics, ml, states)
         for column, label, probability in zip(

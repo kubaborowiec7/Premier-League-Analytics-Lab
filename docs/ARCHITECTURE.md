@@ -262,3 +262,12 @@ Published commit-pinned FPL Core CSVs pass through `data/advanced_players.py`, t
 `features/advanced_players.py` into separate prepared profile artifacts. The cached
 `dashboard/advanced_players.py` view adds role-specific radars, overlays, scatterplots
 and coverage-aware tables. It does not alter M4 archives or frozen M5–M7 models.
+
+## Operational refresh boundary
+
+`scripts/refresh_current_data.py` is an external producer used by GitHub Actions or
+Windows Task Scheduler. It archives mutable current sources, validates completed
+rows, rebuilds player profiles and fits a versioned statistical match snapshot using
+only results before its origin. The frozen M6/M7 reports remain the evaluation record.
+Streamlit reads `live_catalog.json` only after all referenced files exist and verifies
+their hashes and shared origin. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).

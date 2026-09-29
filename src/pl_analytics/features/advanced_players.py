@@ -12,6 +12,7 @@ class Metric:
     group: str
     kind: str = "count"
     lower_better: bool = False
+    aggregation: str = "sum"
 
 
 METRICS = {
@@ -61,8 +62,12 @@ METRICS = {
     "dribbled_past": Metric("Dribbled past", "Defending", lower_better=True),
     "fouls_committed": Metric("Fouls committed", "Discipline", lower_better=True),
     "was_fouled": Metric("Fouls drawn", "Discipline"),
-    "yellow_cards": Metric("Yellow cards", "Discipline", lower_better=True),
-    "red_cards": Metric("Red cards", "Discipline", lower_better=True),
+    "yellow_cards": Metric(
+        "Yellow cards", "Discipline", lower_better=True, aggregation="season_total"
+    ),
+    "red_cards": Metric(
+        "Red cards", "Discipline", lower_better=True, aggregation="season_total"
+    ),
     "offsides": Metric("Offsides", "Discipline", lower_better=True),
     "saves": Metric("Saves", "Goalkeeping"),
     "goals_prevented": Metric("Goals prevented (provider)", "Goalkeeping"),
@@ -140,7 +145,14 @@ def summarize_players(appearances: pd.DataFrame, reference_date: str) -> pd.Data
             source="FPL-Core-Insights",
         )
         for name, metric in METRICS.items():
-            if metric.kind == "ratio":
+            if metric.aggregation == "season_total":
+                values = group.get(name, pd.Series(np.nan, index=group.index))
+                known = values.dropna().unique()
+                if len(known) > 1:
+                    raise ValueError(f"Conflicting season total for {name}")
+                value = float(known[0]) if len(known) else np.nan
+                valid = pd.Series(pd.notna(value), index=group.index)
+            elif metric.kind == "ratio":
                 numerator, denominator = (
                     ("goals", "total_shots")
                     if name == "goal_conversion"

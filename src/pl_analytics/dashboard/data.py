@@ -133,23 +133,38 @@ def _bundle(path: str, digest: str) -> dict:
     return joblib.load(source)
 
 
+def _artifact_path(root: Path, relative: str) -> Path:
+    path = (root / relative).resolve()
+    if not path.is_relative_to(root.resolve()):
+        raise ArtifactError("Artifact path escapes the configured artifact directory")
+    return path
+
+
 def prepared_models(settings: Settings) -> tuple[dict, dict, pd.DataFrame, dict]:
     """Load only trusted local, checksum-pinned bundles; the UI accepts no uploaded models."""
     root = settings.artifact_dir
-    metadata = report(root / "dashboard/catalog.json")
+    live = report(root / "dashboard/live_catalog.json")
+    metadata = live or report(root / "dashboard/catalog.json")
     if not metadata or not metadata.get("models"):
         raise ArtifactError("Match models are not prepared for the dashboard yet.")
+    paths = (
+        {name: _artifact_path(root, value) for name, value in metadata["paths"].items()}
+        if metadata.get("paths")
+        else {
+            "statistics": root / "m7/statistical_benchmarks/latest_origin_models.joblib",
+            "ml": root / "m7/classifiers.joblib",
+            "states": root / "dashboard/team_states.parquet",
+            "clubs": root / "dashboard/clubs.parquet",
+        }
+    )
     states = table(
-        root / "dashboard/team_states.parquet",
+        paths["states"],
         ("club_id", "competition_id", "season", "origin", "elo"),
     )
     bundles = {}
-    paths = {
-        "statistics": root / "m7/statistical_benchmarks/latest_origin_models.joblib",
-        "ml": root / "m7/classifiers.joblib",
-    }
     try:
-        for name, path in paths.items():
+        for name in ("statistics", "ml"):
+            path = paths[name]
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             if digest != metadata["models"][name]:
                 raise ArtifactError("Model checksum mismatch")
@@ -168,6 +183,16 @@ def prepared_models(settings: Settings) -> tuple[dict, dict, pd.DataFrame, dict]
             "Prepared match models are missing or incompatible; rebuild the dashboard data."
         ) from error
     return bundles["statistics"], bundles["ml"], states, metadata
+
+
+def model_clubs(settings: Settings, metadata: dict) -> pd.DataFrame:
+    """Load names from the same versioned context as the selected model bundle."""
+    path = (
+        _artifact_path(settings.artifact_dir, metadata["paths"]["clubs"])
+        if metadata.get("paths")
+        else settings.artifact_dir / "dashboard/clubs.parquet"
+    )
+    return table(path, ("club_id", "competition_id", "name"))
 
 
 def scenario(

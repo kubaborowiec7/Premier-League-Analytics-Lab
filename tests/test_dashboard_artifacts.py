@@ -76,6 +76,59 @@ def test_mixed_forecast_origins_rejected(artifacts):
         prepared_models(artifacts)
 
 
+def test_live_catalog_is_preferred_and_cannot_escape_artifact_root(artifacts):
+    root = artifacts.artifact_dir
+    live = root / "live/snapshots/current"
+    live.mkdir(parents=True)
+    origin = pd.Timestamp("2024-02-01", tz="UTC")
+    paths = {
+        "statistics": live / "statistical_models.joblib",
+        "ml": live / "classifiers.joblib",
+        "states": live / "team_states.parquet",
+        "clubs": live / "clubs.parquet",
+    }
+    joblib.dump(
+        {
+            "competition_id": "TEST",
+            "origin": origin,
+            "models": {"base_rate": np.array([0.5, 0.25, 0.25])},
+        },
+        paths["statistics"],
+    )
+    joblib.dump({"models": [], "chosen": "none"}, paths["ml"])
+    pd.DataFrame(
+        {
+            "club_id": ["a", "b"],
+            "competition_id": ["TEST"] * 2,
+            "season": ["2023/24"] * 2,
+            "origin": [origin] * 2,
+            "elo": [1510, 1490],
+        }
+    ).to_parquet(paths["states"])
+    pd.DataFrame(
+        {"club_id": ["a", "b"], "competition_id": ["TEST"] * 2, "name": ["A", "B"]}
+    ).to_parquet(paths["clubs"])
+    metadata = {
+        "mode": "operational",
+        "origin": origin.isoformat(),
+        "paths": {name: str(path.relative_to(root)) for name, path in paths.items()},
+        "models": {
+            name: hashlib.sha256(paths[name].read_bytes()).hexdigest()
+            for name in ("statistics", "ml")
+        },
+    }
+    catalog_path = root / "dashboard/live_catalog.json"
+    catalog_path.write_text(json.dumps(metadata))
+    statistics, _, states, selected = prepared_models(artifacts)
+    assert statistics["origin"] == origin and states.elo.tolist() == [1510, 1490]
+    assert selected["mode"] == "operational"
+
+    metadata["paths"]["states"] = "../outside.parquet"
+    catalog_path.write_text(json.dumps(metadata))
+    with pytest.raises(ArtifactError, match="escapes"):
+        prepared_models(artifacts)
+
+
 def test_value_filters_intervals_and_all_experiment_reports(artifacts):
     root = artifacts.artifact_dir
     pd.DataFrame(

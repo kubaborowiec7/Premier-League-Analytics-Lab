@@ -37,8 +37,10 @@ peer features are unavailable for similarity. Valuations show observed editorial
 values separately from model estimates and nominal 90% intervals. Fragile rows
 can be revealed explicitly; all rows remain in Model Lab evaluation metrics.
 
-Match predictions are hypothetical fixtures at the displayed frozen origin,
-not live forecasts. Only goal models return score matrices; H/D/A classifiers do
+When `live_catalog.json` exists, Match Predictor uses the newest validated operational
+snapshot and displays both its UTC origin and last included result. Without it, the
+page falls back to the evaluated frozen origin. The selector uses short names and a
+plain-language description for every model. Only goal models return score matrices; H/D/A classifiers do
 not fabricate scorelines. The 0–6 display states its omitted probability mass.
 The ML pilot contains only 40 final fixtures. Model Lab exposes full model cards,
 including poor results and limitations, with comparisons confined to each experiment.
@@ -54,3 +56,10 @@ and partial 2026/27 profiles. Player Explorer and Scouting Finder then expose
 role-specific radar overlays (up to five players), cross-season comparisons,
 selectable scatterplot axes and dark Total/Per-90 performance panels. The 2023/24
 view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md).
+
+## Current refresh
+
+Run `python scripts/refresh_current_data.py` for an immediate update. The supplied
+GitHub Actions workflow and Windows Task Scheduler installer automate this outside
+the web process. Streamlit remains read-only and never downloads or fits on a button
+click. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).

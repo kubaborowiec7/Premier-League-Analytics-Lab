@@ -365,3 +365,22 @@ See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md).
 Local verification: compileall and Ruff pass; 150 tests pass, 13 PostgreSQL tests
 skip without a local server. Statement coverage: 87.45%. Pinned builds produce
 562 / 537 / 406 profiles from 380 / 380 / 40 matches respectively.
+
+---
+
+## M12 — Current data operations
+
+User-requested extension after M11. A daily external refresh archives current match
+and player sources, excludes unplayed fixtures, rebuilds advanced player profiles and
+publishes versioned leakage-safe match-inference artifacts. Match Predictor now shows
+the last included result, operational origin, short model names and explanations.
+Streamlit remains read-only; automation is provided by GitHub Actions and a Windows
+Task Scheduler installer. Progressive metrics remain out of scope.
+
+First validated local run on 2026-09-29: 1,131 match-training rows, 20 current clubs,
+results through 2026-09-20, and 420 current-season player profiles from 50 completed
+matches. Across all advanced seasons the prepared table contains 1,519 profiles.
+See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
+
+Suggested commit:
+`feat: automate current football data refresh`

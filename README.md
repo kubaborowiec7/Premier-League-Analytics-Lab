@@ -13,16 +13,17 @@ There is no public hosted demo. Screenshots below use prepared historical artifa
 not live data. The repository contains code, manifests and small evaluation reports;
 raw datasets and trained bundles are excluded from Git.
 
-## New: advanced player comparisons
+## Current data and advanced player comparisons
 
 Three additional player seasons: **2024/25 (562 profiles), 2025/26 (537), and partial
-2026/27 (406)**. Position-aware radars overlay up to five players in distinct colors,
+2026/27**. The current-season count grows after each refresh. Position-aware radars overlay up to five players in distinct colors,
 including cross-season comparisons. Defensive profiles emphasize tackles,
 interceptions, recoveries, blocks, clearances and aerials. Dark performance panels
 show totals/per-90 values, percentiles and metric coverage.
 
 ```bash
 python scripts/build_advanced_players.py --download
+python scripts/refresh_current_data.py
 ```
 
 The published source covers most requested shooting/passing/possession/defensive
@@ -39,7 +40,7 @@ several other fields remain explicitly unavailable. [Definitions and reproductio
 | Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
-| Match Predictor | Frozen-origin H/D/A probabilities; Poisson/Dixon–Coles score matrices |
+| Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |
 | Model Lab | Chronological benchmark tables, selection decisions and model cards |
 
 ![Overview](docs/screenshots/overview.png)
@@ -78,8 +79,11 @@ flowchart TD
     B --> F[M4-M7 scoped Python feature pipelines]
     F --> G[Past-only features and chronological experiments]
     G --> H[Frozen models + predictions + evaluation reports]
+    B --> R[Scheduled current-data refresh]
+    R --> S[Versioned operational inference snapshot]
     F --> I[Player profiles + uncertainty]
     H --> J[Explicit dashboard preparation]
+    S --> J
     I --> J
     J --> K[Cached read-only Streamlit app]
     E --> L[SQL analysis and integration checks]
@@ -150,7 +154,8 @@ Selection outputs are frozen. For a fresh reproduction after selection already e
 use the documented new output directory; do not overwrite an evaluated experiment.
 Full contracts and refresh instructions: [player analytics](docs/PLAYER_ANALYTICS.md),
 [value models](docs/VALUE_MODELS.md), [statistical matches](docs/MATCH_MODELS.md),
-[match ML](docs/MATCH_ML.md), [dashboard](docs/DASHBOARD.md).
+[match ML](docs/MATCH_ML.md), [dashboard](docs/DASHBOARD.md), and
+[current refresh](docs/CURRENT_REFRESH.md).
 
 For the separate PostgreSQL and exploratory notebook path:
 

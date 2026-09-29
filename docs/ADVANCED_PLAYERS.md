@@ -64,8 +64,10 @@ dribbles, duels, aerials, touches, dispossessions, tackles, interceptions, recov
 blocks, clearances, fouls, offsides and provider goalkeeper measures where recorded.
 
 Absent fields are shown as **—**, never fabricated: progressive passes/carries,
-forward-pass completion, headed goals, big chances created and player yellow/red
-cards are not supplied by this adapter. Final-third passes are not relabelled as
+forward-pass completion, headed goals and big chances created are not supplied by
+this adapter. Current-season yellow/red cards come from the latest cumulative
+player-season row published for each gameweek; historical pinned snapshots still
+lack those fields. Final-third passes are not relabelled as
 progressive passes; ground duels are not relabelled as defensive-only duels.
 Some otherwise supported metrics are missing entirely from the newest snapshot.
 
@@ -102,6 +104,7 @@ and for each registry metric: raw/derived total or percentage, `_per90`, `_cover
 player counts per metric. UI percentiles and peer counts are cached by prepared
 frame and the selected threshold; normalization context is retained.
 
-To refresh, select a reviewed new upstream commit, archive its new payloads and
-record a new manifest version/counts. Never alter old raw files or the frozen M5–M7
-experiments. Multiple competitions use configuration/mapping, not copied pipelines.
+`python scripts/refresh_current_data.py` resolves one current upstream commit,
+archives its payloads, ignores scheduled matches and publishes new counts. Never alter
+old raw files or the frozen M5–M7 experiments. Multiple competitions use
+configuration/mapping, not copied pipelines. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).

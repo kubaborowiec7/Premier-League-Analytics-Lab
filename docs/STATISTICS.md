@@ -404,3 +404,12 @@ improved by applying this post-evaluation diagnostic. See the
 coverage gates, role/competition/season midrank percentiles, adverse-metric direction
 and the distinction between true aggregated ratios and weighted match percentages.
 Season profiles are retrospective and excluded from the frozen prediction models.
+
+## Operational match refits
+
+The scheduled refresh fits Elo, Poisson and Dixon–Coles at a declared UTC origin from
+completed results strictly before that origin. Recent variants retain their documented
+365-day half-life. It reuses the frozen M7 calibrated classifier for inference with
+new past-only team states; it does not reselect or reevaluate that model. The dashboard
+labels the operational origin and last included result. Evaluation claims continue to
+come only from the frozen chronological M6/M7 tests.

@@ -228,3 +228,10 @@ hashes in `data/manifests/advanced_players.json`. Coverage: 2024/25, 2025/26 and
 upstream-provider rights are not independently granted here. No underlying sports
 website is scraped. Snapshots retain retrieval metadata and remain outside Git.
 See [ADVANCED_PLAYERS.md](ADVANCED_PLAYERS.md) for metric definitions and gaps.
+
+For ongoing current-season updates, `refresh_current_data.py` resolves `main` to one
+commit before downloading any FPL Core files. It archives root player/playerstats
+files and only gameweeks containing a completed fixture. Football-Data's current E0
+URL is also archived by content hash on every run. Mutable URLs never overwrite prior
+payloads. Retrieval metadata, resolved commit and hashes are recorded in the ignored
+operational manifest. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).

@@ -413,3 +413,18 @@ completed results strictly before that origin. Recent variants retain their docu
 new past-only team states; it does not reselect or reevaluate that model. The dashboard
 labels the operational origin and last included result. Evaluation claims continue to
 come only from the frozen chronological M6/M7 tests.
+
+## FPL expected minutes and points
+
+M16 estimates expected minutes as a probability-weighted mixture of minutes conditional
+on starting and entering as a substitute. Six completed fixtures are exponentially
+weighted with decay 0.65. One match-equivalent position prior regularizes start,
+appearance and 60-minute probabilities and conditional minutes. Availability is applied
+after the historical estimate.
+
+Expected points are the sum of official scoring-event expectations. Count rates are
+shrunk toward active position medians according to exposure. Poisson counts approximate
+save awards, defensive-contribution thresholds and goals-conceded deductions. The model
+does not claim independence is literally true; a later joint simulation should connect
+legal line-ups, scorelines, player event shares and bonus. Chronological evaluation uses
+only snapshots and appearances before the target gameweek.

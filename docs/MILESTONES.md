@@ -429,3 +429,23 @@ prices and threshold-based chip advice are labeled explicitly.
 
 Suggested commit:
 `feat: optimize fpl squad and lineup decisions`
+
+---
+
+## M16 — Calibrated FPL projection foundation
+
+User-requested extension after M15. Expected minutes now use six-match recency
+weighting, empirical position priors, official availability and separate probabilities
+of starting, appearing and reaching 60 minutes. Expected points explicitly cover the
+main position-specific scoring paths: appearances, goals, assists, clean sheets,
+goalkeeper saves and penalties, defensive contributions, bonus, discipline and goals
+conceded. The UI exposes component contributions and a session-only xMins scenario.
+
+The chronological pilot excludes players with no prior senior minutes before scoring,
+reducing the reserve-zero bias in M15. GW2–GW5 contains 1,467 eligible observations:
+MAE 1.83 versus 2.08 for the position baseline, RMSE 2.75, mean Spearman 0.53 and
+xMins MAE 20.4. Advanced-stat ranks are displayed as `Top N%` while stored numeric
+percentiles remain unchanged.
+
+Suggested commit:
+`model: improve fpl minutes and points projections`

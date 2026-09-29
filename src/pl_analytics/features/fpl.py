@@ -9,6 +9,8 @@ from scipy.stats import poisson
 HORIZONS = (1, 2, 3, 4, 5)
 GOAL_POINTS = {"GK": 10.0, "DEF": 6.0, "MID": 5.0, "FWD": 4.0}
 CLEAN_SHEET_POINTS = {"GK": 4.0, "DEF": 4.0, "MID": 1.0, "FWD": 0.0}
+RECENCY_DECAY = 0.65
+MINUTES_PRIOR_STRENGTH = 1.0
 
 
 def latest_players(
@@ -158,11 +160,186 @@ def _availability(row: pd.Series) -> float:
     return 1.0 if row.status == "a" else 0.5 if row.status == "d" else 0.0
 
 
+def _posterior_probability(
+    observations: pd.Series,
+    weights: pd.Series,
+    prior: float,
+) -> float:
+    successes = float((observations.astype(float) * weights).sum())
+    return (successes + MINUTES_PRIOR_STRENGTH * prior) / (
+        float(weights.sum()) + MINUTES_PRIOR_STRENGTH
+    )
+
+
+def expected_minutes_features(
+    players: pd.DataFrame,
+    appearances: pd.DataFrame | None,
+    *,
+    lookback: int = 6,
+) -> pd.DataFrame:
+    """Estimate start, appearance and 60-minute probabilities from recent matches.
+
+    Recent fixtures receive exponentially greater weight. Position priors prevent one
+    or two observations from producing certainty, while official availability remains
+    an explicit final cap. The calculation uses only matches already completed.
+    """
+    required_players = {"source_player_id", "position_group", "minutes", "starts", "gw"}
+    if not required_players <= set(players):
+        raise ValueError("FPL minute-model player fields are missing")
+    base = players.copy()
+    base["availability_probability"] = base.apply(_availability, axis=1)
+    if appearances is None or appearances.empty:
+        games = base.gw.clip(lower=1)
+        base["start_probability"] = (base.starts / games).clip(0, 1)
+        base["appearance_probability"] = (base.minutes / (games * 60)).clip(0, 1)
+        base["sixty_probability"] = (base.minutes / (games * 90)).clip(0, 1)
+        base["expected_minutes"] = (base.minutes / games).clip(0, 90)
+        for column in (
+            "start_probability",
+            "appearance_probability",
+            "sixty_probability",
+            "expected_minutes",
+        ):
+            base[column] *= base.availability_probability
+        base["minutes_model_matches"] = games.astype(int)
+        return base
+
+    required = {"player_id", "match_id", "gameweek", "minutes_played", "start_min"}
+    if not required <= set(appearances):
+        raise ValueError("FPL appearance history fields are missing")
+    history = appearances.copy()
+    for column in ("player_id", "gameweek", "minutes_played", "start_min"):
+        history[column] = pd.to_numeric(history[column], errors="coerce")
+    if history[["player_id", "match_id", "gameweek"]].isna().any().any():
+        raise ValueError("FPL appearance history has missing identities")
+    if history.duplicated(["player_id", "match_id"]).any():
+        raise ValueError("FPL appearance history has duplicate player-match rows")
+    history = history.merge(
+        base[["source_player_id", "position_group"]],
+        left_on="player_id",
+        right_on="source_player_id",
+        how="inner",
+        validate="many_to_one",
+    )
+    history["minutes_played"] = history.minutes_played.fillna(0).clip(0, 90)
+    history["started"] = history.minutes_played.gt(0) & history.start_min.fillna(-1).eq(0)
+    history["appeared"] = history.minutes_played.gt(0)
+    history["sixty"] = history.minutes_played.ge(60)
+    current_gw = int(base.gw.max())
+    history = history.loc[history.gameweek.le(current_gw)].copy()
+    history["age"] = (current_gw - history.gameweek).clip(lower=0)
+    history = history.loc[history.age.lt(lookback)]
+    history["weight"] = RECENCY_DECAY ** history.age
+
+    priors: dict[str, dict[str, float]] = {}
+    for position, frame in history.groupby("position_group"):
+        started = frame.started.astype(float)
+        appeared = frame.appeared.astype(float)
+        sixty = frame.sixty.astype(float)
+        start_rows = frame.loc[frame.started]
+        sub_rows = frame.loc[frame.appeared & ~frame.started]
+        priors[position] = {
+            "start": float(started.mean()),
+            "appear": float(appeared.mean()),
+            "sixty": float(sixty.mean()),
+            "start_minutes": (
+                float(start_rows.minutes_played.mean()) if not start_rows.empty else 75
+            ),
+            "sub_minutes": float(sub_rows.minutes_played.mean()) if not sub_rows.empty else 15,
+        }
+
+    estimates: list[dict[str, float | int]] = []
+    for player in base.itertuples(index=False):
+        frame = history.loc[history.player_id.eq(player.source_player_id)].sort_values(
+            "gameweek", ascending=False
+        )
+        prior = priors.get(
+            player.position_group,
+            {"start": 0.45, "appear": 0.60, "sixty": 0.40, "start_minutes": 75, "sub_minutes": 15},
+        )
+        weight = frame.weight
+        start_probability = _posterior_probability(frame.started, weight, prior["start"])
+        appearance_probability = max(
+            start_probability,
+            _posterior_probability(frame.appeared, weight, prior["appear"]),
+        )
+        sixty_probability = min(
+            appearance_probability,
+            _posterior_probability(frame.sixty, weight, prior["sixty"]),
+        )
+        starters = frame.loc[frame.started]
+        substitutes = frame.loc[frame.appeared & ~frame.started]
+        start_minutes = (
+            float(
+                (
+                    (starters.minutes_played * starters.weight).sum()
+                    + MINUTES_PRIOR_STRENGTH * prior["start_minutes"]
+                )
+                / (starters.weight.sum() + MINUTES_PRIOR_STRENGTH)
+            )
+            if not starters.empty
+            else prior["start_minutes"]
+        )
+        sub_minutes = (
+            float(
+                (
+                    (substitutes.minutes_played * substitutes.weight).sum()
+                    + MINUTES_PRIOR_STRENGTH * prior["sub_minutes"]
+                )
+                / (substitutes.weight.sum() + MINUTES_PRIOR_STRENGTH)
+            )
+            if not substitutes.empty
+            else prior["sub_minutes"]
+        )
+        expected = start_probability * start_minutes + max(
+            0.0, appearance_probability - start_probability
+        ) * sub_minutes
+        availability = float(player.availability_probability)
+        estimates.append(
+            {
+                "source_player_id": int(player.source_player_id),
+                "start_probability": np.clip(start_probability * availability, 0, 1),
+                "appearance_probability": np.clip(appearance_probability * availability, 0, 1),
+                "sixty_probability": np.clip(sixty_probability * availability, 0, 1),
+                "expected_minutes": np.clip(expected * availability, 0, 90),
+                "minutes_model_matches": int(len(frame)),
+            }
+        )
+    return base.drop(
+        columns=[
+            "start_probability",
+            "appearance_probability",
+            "sixty_probability",
+            "expected_minutes",
+        ],
+        errors="ignore",
+    ).merge(pd.DataFrame(estimates), on="source_player_id", validate="one_to_one")
+
+
+def _shrunk_per90(frame: pd.DataFrame, column: str, *, prior_minutes: float = 450) -> pd.Series:
+    """Shrink a per-90 rate toward an active position median."""
+    values = pd.to_numeric(frame.get(column, pd.Series(np.nan, index=frame.index)), errors="coerce")
+    active = values.where(frame.minutes.gt(0))
+    prior = active.groupby(frame.position_group).transform("median").fillna(0)
+    reliability = frame.minutes / (frame.minutes + prior_minutes)
+    return (reliability * values.fillna(prior) + (1 - reliability) * prior).clip(lower=0)
+
+
+def _expected_integer_awards(rate: float, divisor: int) -> float:
+    """Return E[floor(N/divisor)] for a Poisson count N."""
+    if rate <= 0:
+        return 0.0
+    upper = max(20, int(np.ceil(rate + 8 * np.sqrt(rate))))
+    counts = np.arange(upper + 1)
+    return float(np.sum((counts // divisor) * poisson.pmf(counts, rate)))
+
+
 def project_players(
     players: pd.DataFrame,
     history: pd.DataFrame,
     fixtures: pd.DataFrame,
     *,
+    appearances: pd.DataFrame | None = None,
     horizons: Iterable[int] = HORIZONS,
 ) -> pd.DataFrame:
     """Project simple expected FPL points from current rates and future fixture context.
@@ -170,22 +347,37 @@ def project_players(
     This deliberately transparent baseline uses only information available at the
     refresh origin. It is a planning estimate, not a claim of calibrated certainty.
     """
-    result = players.copy()
-    current_gw = int(result.gw.max())
-    result["availability_probability"] = result.apply(_availability, axis=1)
-    result["expected_minutes"] = (
-        (result.minutes / max(current_gw, 1)).clip(0, 90) * result.availability_probability
-    )
-    position_fallback = result.groupby("position_group")["points_per_game"].transform("median")
-    observed_rate = (result.total_points * 90 / result.minutes.replace(0, np.nan)).fillna(
-        position_fallback
-    )
+    result = expected_minutes_features(players, appearances)
     reliability = result.minutes / (result.minutes + 450)
-    position_rate = result.groupby("position_group")["points_per_game"].transform("median")
     result["reliability"] = reliability.clip(0, 1)
-    result["shrunk_points_per90"] = (
-        reliability * observed_rate + (1 - reliability) * position_rate.fillna(2.0)
+    observed_rate = result.total_points * 90 / result.minutes.replace(0, np.nan)
+    active_prior = (
+        observed_rate.where(result.minutes.gt(0))
+        .groupby(result.position_group)
+        .transform("median")
     )
+    result["shrunk_points_per90"] = (
+        reliability * observed_rate.fillna(active_prior)
+        + (1 - reliability) * active_prior.fillna(2.0)
+    )
+    for source, target in (
+        ("xg_per90", "projected_xg_per90"),
+        ("xa_per90", "projected_xa_per90"),
+        ("defensive_contribution_per90", "projected_defensive_contribution_per90"),
+        ("saves_per_90", "projected_saves_per90"),
+    ):
+        result[target] = _shrunk_per90(result, source)
+    for total, target in (
+        ("penalties_saved", "projected_penalty_saves_per90"),
+        ("bonus", "projected_bonus_per90"),
+        ("yellow_cards", "projected_yellow_cards_per90"),
+        ("red_cards", "projected_red_cards_per90"),
+        ("own_goals", "projected_own_goals_per90"),
+        ("penalties_missed", "projected_penalties_missed_per90"),
+    ):
+        values = pd.to_numeric(result.get(total, pd.Series(0, index=result.index)), errors="coerce")
+        result[f"raw_{target}"] = values.fillna(0) * 90 / result.minutes.replace(0, np.nan)
+        result[target] = _shrunk_per90(result, f"raw_{target}", prior_minutes=900)
     point_sd = history.groupby("source_player_id").points.std().rename("historical_points_sd")
     result = result.merge(point_sd, on="source_player_id", how="left", validate="one_to_one")
     position_sd = result.groupby("position_group")["historical_points_sd"].transform("median")
@@ -197,40 +389,95 @@ def project_players(
         gameweeks = future_gameweeks[:horizon]
         selected_fixtures = fixtures.loc[fixtures.gameweek.isin(gameweeks)]
         points, variances, labels = [], [], []
+        component_rows: list[dict[str, float]] = []
         for player in result.itertuples(index=False):
             schedule = selected_fixtures.loc[selected_fixtures.club_id.eq(player.club_id)]
             projected = 0.0
             variance = 0.0
             descriptions = []
+            components = {
+                "appearance": 0.0,
+                "attack": 0.0,
+                "clean_sheet": 0.0,
+                "saves": 0.0,
+                "defensive": 0.0,
+                "bonus": 0.0,
+                "discipline": 0.0,
+                "goals_conceded": 0.0,
+            }
             for fixture in schedule.itertuples(index=False):
                 minutes_factor = player.expected_minutes / 90
-                appearance = min(2.0, player.expected_minutes / 30)
+                appearance = player.appearance_probability + player.sixty_probability
                 goal_points = GOAL_POINTS.get(player.position_group, 4.0)
                 clean_points = CLEAN_SHEET_POINTS.get(player.position_group, 0.0)
                 attack = minutes_factor * fixture.attack_multiplier * (
-                    np.nan_to_num(player.xg_per90) * goal_points
-                    + np.nan_to_num(player.xa_per90) * 3
+                    player.projected_xg_per90 * goal_points
+                    + player.projected_xa_per90 * 3
                 )
-                clean_sheet = minutes_factor * fixture.clean_sheet_probability * clean_points
+                clean_sheet = (
+                    player.sixty_probability
+                    * fixture.clean_sheet_probability
+                    * clean_points
+                )
                 threshold = 10 if player.position_group == "DEF" else 12
-                actions = max(0.0, np.nan_to_num(player.defensive_contribution_per90))
-                defensive = 2 * poisson.sf(threshold - 1, actions * minutes_factor)
-                rate_baseline = player.shrunk_points_per90 * minutes_factor
-                modelled = appearance + attack + clean_sheet + defensive
-                fixture_points = 0.5 * rate_baseline * fixture.attack_multiplier + 0.5 * modelled
+                defensive = 0.0
+                if player.position_group != "GK":
+                    actions = player.projected_defensive_contribution_per90
+                    defensive = 2 * poisson.sf(threshold - 1, actions * minutes_factor)
+                saves = 0.0
+                penalty_saves = 0.0
+                if player.position_group == "GK":
+                    saves = _expected_integer_awards(
+                        player.projected_saves_per90 * minutes_factor, 3
+                    )
+                    penalty_saves = 5 * player.projected_penalty_saves_per90 * minutes_factor
+                bonus = player.projected_bonus_per90 * minutes_factor
+                discipline = -minutes_factor * (
+                    player.projected_yellow_cards_per90
+                    + 3 * player.projected_red_cards_per90
+                    + 2 * player.projected_own_goals_per90
+                    + 2 * player.projected_penalties_missed_per90
+                )
+                goals_conceded = 0.0
+                if player.position_group in {"GK", "DEF"}:
+                    conceded_rate = max(0.01, -np.log(fixture.clean_sheet_probability))
+                    goals_conceded = -_expected_integer_awards(conceded_rate * minutes_factor, 2)
+                fixture_points = (
+                    appearance
+                    + attack
+                    + clean_sheet
+                    + saves
+                    + penalty_saves
+                    + defensive
+                    + bonus
+                    + discipline
+                    + goals_conceded
+                )
                 projected += float(fixture_points)
                 variance += float((player.historical_points_sd * minutes_factor) ** 2)
                 descriptions.append(
                     f"GW{fixture.gameweek} {fixture.opponent_short_name} ({fixture.venue})"
                 )
+                components["appearance"] += float(appearance)
+                components["attack"] += float(attack)
+                components["clean_sheet"] += float(clean_sheet)
+                components["saves"] += float(saves + penalty_saves)
+                components["defensive"] += float(defensive)
+                components["bonus"] += float(bonus)
+                components["discipline"] += float(discipline)
+                components["goals_conceded"] += float(goals_conceded)
             points.append(projected)
             variances.append(variance)
             labels.append(" · ".join(descriptions) if descriptions else "Blank")
+            component_rows.append(components)
         result[f"projected_points_{horizon}"] = points
         spread = 1.28 * np.sqrt(variances)
         result[f"projection_low_{horizon}"] = np.maximum(0, np.asarray(points) - spread)
         result[f"projection_high_{horizon}"] = np.asarray(points) + spread
         result[f"fixtures_{horizon}"] = labels
+        if horizon == 1:
+            for component in component_rows[0] if component_rows else ():
+                result[f"xpts_{component}_1"] = [row[component] for row in component_rows]
     previous = np.zeros(len(result))
     for horizon, gameweek in enumerate(future_gameweeks[: max(horizon_values)], start=1):
         cumulative = result[f"projected_points_{horizon}"].to_numpy(float)

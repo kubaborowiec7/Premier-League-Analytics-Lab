@@ -96,7 +96,8 @@ space, with an explicit candidate competition universe, same season/role/referen
 date and the same coverage gates. Similarity is resemblance, not player quality.
 The dark performance panels switch between totals and per 90 while percentage
 metrics retain their units. Tables show per-metric coverage and peer ranks.
-`P80` means the 80th percentile in the documented peer cohort.
+The UI renders an 80th percentile as **Top 20%** in the documented peer cohort. Stored
+feature columns retain their numeric 0–100 percentiles for reproducible calculations.
 
 Teams uses the same metric registry and adds a sortable squad table. Users can filter
 by season, club, role and minutes, switch between totals and per 90, and choose a

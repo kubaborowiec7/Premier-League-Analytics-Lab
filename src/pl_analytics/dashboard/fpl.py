@@ -122,6 +122,8 @@ def _picks(players: pd.DataFrame) -> None:
         f"projection_low_{horizon}": "Low (80%)",
         f"projection_high_{horizon}": "High (80%)",
         "expected_minutes": "xMins / fixture",
+        "start_probability": "Start %",
+        "sixty_probability": "60+ %",
         "ownership_pct": "Owned %",
         "form": "FPL form",
         "xg_per90": "xG/90",
@@ -139,6 +141,8 @@ def _picks(players: pd.DataFrame) -> None:
             "Low (80%)": st.column_config.NumberColumn(format="%.1f"),
             "High (80%)": st.column_config.NumberColumn(format="%.1f"),
             "xMins / fixture": st.column_config.NumberColumn(format="%.0f"),
+            "Start %": st.column_config.NumberColumn(format="percent"),
+            "60+ %": st.column_config.NumberColumn(format="percent"),
             "Owned %": st.column_config.NumberColumn(format="%.1f%%"),
             "FPL form": st.column_config.NumberColumn(format="%.1f"),
             "xG/90": st.column_config.NumberColumn(format="%.2f"),
@@ -146,6 +150,62 @@ def _picks(players: pd.DataFrame) -> None:
             "Def. actions/90": st.column_config.NumberColumn(format="%.1f"),
         },
     )
+    with st.expander("Player projection and xMins scenario"):
+        selected = st.selectbox(
+            "Player",
+            view.sort_values("player_name").player_name,
+            key="fpl-projection-player",
+        )
+        row = view.loc[view.player_name.eq(selected)].iloc[0]
+        override = st.slider(
+            "Scenario xMins",
+            0,
+            95,
+            int(round(row.expected_minutes)),
+            key="fpl-xmins-scenario",
+        )
+        original = float(row.expected_minutes)
+        ratio = override / original if original > 0 else 0.0
+        appearance_probability = min(1.0, float(row.appearance_probability) * ratio)
+        sixty_probability = min(
+            appearance_probability, float(row.sixty_probability) * ratio
+        )
+        original_appearance = float(row.xpts_appearance_1)
+        other_points = float(row.projected_points_1) - original_appearance
+        scenario_points = appearance_probability + sixty_probability + other_points * ratio
+        first, second, third = st.columns(3)
+        first.metric("Model xMins", f"{original:.1f}")
+        second.metric("Scenario xMins", f"{override}")
+        third.metric("Scenario GW xPts", f"{max(0, scenario_points):.2f}")
+        components = pd.DataFrame(
+            {
+                "Component": [
+                    "Appearance",
+                    "Attack",
+                    "Clean sheet",
+                    "Saves / penalties",
+                    "Defensive contributions",
+                    "Bonus",
+                    "Discipline",
+                    "Goals conceded",
+                ],
+                "xPts": [
+                    row.xpts_appearance_1,
+                    row.xpts_attack_1,
+                    row.xpts_clean_sheet_1,
+                    row.xpts_saves_1,
+                    row.xpts_defensive_1,
+                    row.xpts_bonus_1,
+                    row.xpts_discipline_1,
+                    row.xpts_goals_conceded_1,
+                ],
+            }
+        )
+        st.dataframe(components, hide_index=True, width="stretch")
+        st.caption(
+            "The scenario is session-only and proportionally rescales event exposure. "
+            "It helps test your own line-up view; it does not overwrite the model artifact."
+        )
 
 
 def _ticker(fixtures: pd.DataFrame) -> None:
@@ -439,11 +499,12 @@ def _backtest(settings: Settings) -> None:
     if frame.empty or not summary:
         st.info("Backtest artifacts are not built yet. Run the current-data refresh.")
         return
-    first, second, third, fourth = st.columns(4)
+    first, second, third, fourth, fifth = st.columns(5)
     first.metric("Observations", summary["observations"])
     second.metric("Model MAE", f"{summary['mae']:.2f}")
     third.metric("Position baseline MAE", f"{summary['baseline_mae']:.2f}")
     fourth.metric("Mean Spearman", f"{summary['mean_spearman']:.2f}")
+    fifth.metric("xMins MAE", f"{summary['minutes_mae']:.1f}")
     by_week = (
         frame.assign(
             model_error=(frame.predicted_points - frame.actual_points).abs(),
@@ -459,8 +520,9 @@ def _backtest(settings: Settings) -> None:
     )
     st.caption(
         "Every target gameweek is predicted from the latest snapshot strictly before it. "
-        "The pilot currently covers only the available early-season gameweeks, so rankings "
-        "and errors remain unstable. This validates temporal isolation, not production accuracy."
+        "Players with no prior senior minutes are excluded before scoring, preventing hundreds "
+        "of predictable reserve zeroes from flattering MAE. The pilot still covers only the "
+        "available early-season gameweeks, so results remain unstable."
     )
 
 
@@ -488,10 +550,11 @@ def render_fpl(settings: Settings, competition: str) -> None:
         _backtest(settings)
     with st.expander("How these projections work and what they cannot tell you"):
         st.markdown(
-            "The baseline blends season points per 90 with xG, xA, clean-sheet probability, "
-            "defensive contributions, expected minutes and Elo fixture strength. Rates are shrunk "
-            "toward the position average when minutes are scarce. The displayed 80% range uses "
-            "past gameweek volatility and is indicative rather than fully calibrated. Injuries, "
-            "line-ups and late team news can make the projection stale; it is decision support, "
-            "not a guarantee."
+            "The model estimates start, appearance and 60-minute probabilities from up to six "
+            "recent matches with recency weighting and position priors. Expected points apply "
+            "the official scoring structure to appearance, xG/xA, clean sheets, saves, penalty "
+            "saves, defensive contributions, bonus, discipline and goals conceded. Event rates "
+            "are shrunk toward active positional peers when minutes are scarce. Fixture strength "
+            "comes from Elo. The displayed range is indicative rather than fully calibrated, and "
+            "late injuries, press conferences and tactical changes can still make it stale."
         )

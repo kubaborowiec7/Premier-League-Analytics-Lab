@@ -1,6 +1,7 @@
 """Offline FPL Decision Lab artifact builder from archived public snapshots."""
 
 import json
+import re
 from pathlib import Path
 
 import httpx
@@ -130,6 +131,17 @@ def build_fpl_artifacts(
     players_source = _read_frame(raw_dir, _one(files, "players"), source_kind="players")
     teams_source = _read_frame(raw_dir, _one(files, "teams"), source_kind="teams")
     playerstats = _read_frame(raw_dir, _one(files, "playerstats"), source_kind="playerstats")
+    appearance_frames = []
+    for entry in (item for item in files if item["kind"] == "appearances"):
+        found = re.search(r"/GW(\d+)/", entry["path"])
+        if found is None:
+            raise ValueError("Cannot determine the FPL appearance gameweek")
+        frame = _read_frame(raw_dir, entry, source_kind="appearances")
+        frame["gameweek"] = int(found.group(1))
+        appearance_frames.append(frame)
+    if not appearance_frames:
+        raise ValueError("Current FPL appearance history is missing")
+    appearances = pd.concat(appearance_frames, ignore_index=True)
     fixture_sources = [
         _read_frame(raw_dir, entry, source_kind="matches")
         for entry in season.get("fixture_files", [])
@@ -149,7 +161,7 @@ def build_fpl_artifacts(
         position_map=config["position_map"],
     )
     fixtures = fixture_rows(matches, teams_source)
-    projections = project_players(players, history, fixtures)
+    projections = project_players(players, history, fixtures, appearances=appearances)
     backtest = rolling_backtest(
         playerstats,
         players_source,
@@ -197,7 +209,7 @@ def build_fpl_artifacts(
         "future_fixtures": fixtures.match_id.nunique(),
         "manager": manager,
         "manager_sources": manager_sources,
-        "method": "transparent-rate-elo-v1",
+        "method": "recency-events-elo-v2",
         "backtest": backtest_report,
     }
     (destination / "metadata.json").write_text(

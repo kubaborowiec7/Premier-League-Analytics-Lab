@@ -9,6 +9,9 @@ M15 adds an interactive expected-points pitch, a mixed-integer squad/line-up/cap
 optimizer, transfer-hit comparison, transparent chip signals and a rolling historical
 backtest.
 
+M16 replaces the season-average minutes baseline with a recency-weighted availability
+model and expands expected points to the main position-specific FPL scoring events.
+
 ## Rebuild
 
 ```bash
@@ -38,13 +41,38 @@ snapshots or processed artifacts.
 
 ## Projection baseline
 
-For each fixture, the transparent baseline blends:
+### Expected minutes
 
-- season FPL points per 90, shrunk toward the position median according to minutes;
-- expected goals and assists per 90;
+For every player, the latest six completed fixtures receive exponentially declining
+weights (`0.65 ** games_ago`). Position priors with the weight of one match stabilize
+small samples. The model separately estimates:
+
+- probability of starting;
+- probability of any appearance;
+- probability of reaching 60 minutes;
+- minutes conditional on starting or entering as a substitute.
+
+Official availability probability or status caps all four outputs. A recent run of
+starts can therefore outweigh early-season absences, while one isolated start cannot
+produce certain 90 minutes. The UI exposes the three probabilities and a session-only
+xMins scenario control. It does not ingest press conferences or inferred team news.
+
+### Expected points
+
+For each fixture, the transparent event model combines:
+
+- expected appearance points from `P(appearance) + P(60+)`;
+- expected goals and assists per 90, shrunk toward active positional peers;
 - clean-sheet probability and attacking difficulty derived from pre-refresh club Elo;
-- official FPL defensive-contribution thresholds where source coverage exists;
-- expected minutes and the source availability flag.
+- goalkeeper saves and penalty saves;
+- official defensive-contribution thresholds for outfield players;
+- historical bonus rate, cards, own goals and missed penalties;
+- expected deductions for every two goals conceded by goalkeepers and defenders.
+
+The Player projection expander shows the one-gameweek contribution of each component.
+This is an interpretable expectation model rather than a joint match simulation: goal,
+assist and bonus events are not yet simulated together and Elo clean-sheet probabilities
+remain intentionally simple.
 
 The 80% display range scales historical gameweek volatility by projected minutes.
 It is an indicative uncertainty range, not a calibrated prediction interval. Blank and
@@ -68,18 +96,23 @@ chip schedule, and it never executes an FPL action.
 
 ## Backtest
 
-For each target gameweek, `rolling_backtest` uses only the latest cumulative snapshot
-strictly before that gameweek. Exposure-weighted points per game are shrunk toward a
-position median and compared with the following gameweek's observed points. The report
-shows MAE, RMSE, the prior position-median baseline and mean gameweek Spearman rank
-correlation. The current pilot covers GW2–GW5 (2,583 player-gameweek rows): model MAE
-1.19 versus 1.49 for the baseline, RMSE 2.38 and mean Spearman 0.63. Four early-season
-targets are too few to establish stable calibration or expected future performance.
+For each target gameweek, `rolling_backtest` uses only cumulative snapshots strictly
+before that gameweek. It reconstructs prior fixture minutes, applies the same recency
+minute model and scales a shrunk prior points-per-90 rate. Players with no senior minutes
+before the forecast origin are excluded using only prior information; this prevents
+hundreds of predictable reserve zeroes from flattering aggregate error.
+
+The current pilot covers GW2–GW5 (1,467 eligible player-gameweek rows): model MAE 1.83
+versus 2.08 for the active-position baseline, RMSE 2.75, mean Spearman 0.53 and xMins
+MAE 20.4 minutes. Mean predicted points are 2.24 versus 2.40 observed; 28.0% of eligible
+rows score zero. Four early-season targets are too few to establish stable calibration
+or expected future performance.
 
 ## Limitations
 
-This is a simple reproducible baseline. It does not model predicted line-ups, bookmaker
-odds, transfer price changes, season-wide chip scheduling or late injury news. Expected minutes are a
-season average adjusted by availability, so rotations can dominate the forecast. The
-tool supports decisions; it does not claim that the highest-ranked player will score the
-most points. The optimizer and early backtest do not remove those forecast limitations.
+This remains a reproducible planning model rather than a commercial projection feed. It
+does not model predicted line-ups, bookmaker odds, press conferences, transfer price
+changes, season-wide chip scheduling or late injury news. It has no explicit dependency
+between competing players for one starting place. Goalkeeper save and bonus expectations
+use shrunk historical rates; the scoreline is not jointly simulated. The tool supports
+decisions and does not claim that the highest-ranked player will score the most points.

@@ -20,6 +20,7 @@ from pl_analytics.dashboard.data import (
     scenario,
     table,
 )
+from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.statistics.players import similar_players
 
 PAGES = {
@@ -174,12 +175,24 @@ def _players(frame: pd.DataFrame, settings) -> None:
             {
                 "Metric": ["Goals", "Assists"],
                 "Percentile": [player.goals_percentile, player.assists_percentile],
+                "Peer rank": [
+                    top_percent_label(player.goals_percentile),
+                    top_percent_label(player.assists_percentile),
+                ],
             }
         )
         st.plotly_chart(
-            px.bar(peers, x="Metric", y="Percentile", range_y=[0, 100]), width="stretch"
+            px.bar(
+                peers,
+                x="Metric",
+                y="Percentile",
+                text="Peer rank",
+                range_y=[0, 100],
+                labels={"Percentile": "Peer standing"},
+            ),
+            width="stretch",
         )
-        st.caption("Percentiles compare the recorded competition, season and position peer group.")
+        st.caption("Top-% ranks compare the recorded competition, season and position peer group.")
     intervals = table(settings.artifact_dir / "dashboard/player_intervals.parquet")
     if not intervals.empty:
         selected = intervals.loc[

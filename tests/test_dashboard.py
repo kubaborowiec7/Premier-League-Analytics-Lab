@@ -11,6 +11,7 @@ from streamlit.testing.v1 import AppTest
 
 from pl_analytics.config import Settings
 from pl_analytics.dashboard.data import ArtifactError, catalog, report, scenario, table
+from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.features.players import aggregate_players, fit_peers
 from pl_analytics.models.match_statistical import GoalModel
 
@@ -24,6 +25,13 @@ PAGES = [
     "4_Match_Predictor",
     "5_Model_Lab",
 ]
+
+
+def test_percentiles_are_presented_as_top_share():
+    assert top_percent_label(90) == "Top 10%"
+    assert top_percent_label(99.9) == "Top 1%"
+    assert top_percent_label(50) == "Top 50%"
+    assert top_percent_label(float("nan")) == "—"
 
 
 @pytest.fixture

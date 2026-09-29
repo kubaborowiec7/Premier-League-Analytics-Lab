@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from pl_analytics.dashboard.advanced_players import COLORS, radar_chart
+from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.features.advanced_players import (
     METRICS,
     PROFILES,
@@ -164,7 +165,9 @@ def render_teams(frame: pd.DataFrame) -> None:
             "Position": player.position_group,
             "Minutes": player.minutes,
             "Appearances": player.appearances,
-            f"{context} percentile · {METRICS[rank_metric].label}": player[percentile_column],
+            f"{context} rank · {METRICS[rank_metric].label}": top_percent_label(
+                player[percentile_column]
+            ),
             "Eligible peers": player[peer_column],
         }
         for name in metrics:
@@ -176,8 +179,8 @@ def render_teams(frame: pd.DataFrame) -> None:
     st.subheader(f"{clubs[club_id]} squad statistics")
     st.dataframe(pd.DataFrame(table_rows), hide_index=True, width="stretch", height=520)
     st.caption(
-        "Click any column header to sort ascending or descending. League percentiles compare "
-        "the same competition, season and broad position. Team percentiles compare the filtered "
+        "Click any column header to sort ascending or descending. League Top-% ranks compare "
+        "the same competition, season and broad position. Team ranks compare the filtered "
         "squad shown above; unavailable values remain blank."
     )
 

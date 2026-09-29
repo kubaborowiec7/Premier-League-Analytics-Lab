@@ -19,7 +19,7 @@ Three additional player seasons: **2024/25 (562 profiles), 2025/26 (537), and pa
 2026/27**. The current-season count grows after each refresh. Position-aware radars overlay up to five players in distinct colors,
 including cross-season comparisons. Defensive profiles emphasize tackles,
 interceptions, recoveries, blocks, clearances and aerials. Dark performance panels
-show totals/per-90 values, percentiles and metric coverage.
+show totals/per-90 values, intuitive Top-% peer ranks and metric coverage.
 
 ```bash
 python scripts/build_advanced_players.py --download
@@ -33,7 +33,7 @@ FPL defensive contributions are included from 2025/26 onward where the source
 publishes them; 2024/25 remains blank rather than being estimated.
 
 The Teams workspace adds a sortable all-statistics squad table, Total/Per-90 values,
-team or role-matched league percentiles, five-player radar overlays and peer
+team or role-matched league Top-% ranks, five-player radar overlays and peer
 scatterplots. Its player shortcut opens the same season and player in Player Explorer.
 
 ![Defender radar comparison](docs/screenshots/defender-comparison.png)
@@ -46,7 +46,7 @@ scatterplots. Its player shortcut opens the same season and player in Player Exp
 | Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
 | Teams | Sortable squad statistics, team/league cohorts and up to five-player radar/scatter comparisons |
-| FPL Decision Lab | 1/3/5-GW picks, fixture ticker, transfer and captaincy comparisons, optional public squad |
+| FPL Decision Lab | Recency-based xMins, event-based 1/3/5-GW xPts, fixture ticker, optimizer and optional public squad |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
 | Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |
 | Model Lab | Chronological benchmark tables, selection decisions and model cards |

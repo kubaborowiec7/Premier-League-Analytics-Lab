@@ -4,7 +4,12 @@ import httpx
 import pandas as pd
 
 from pl_analytics.data.fpl import fetch_public_team, map_public_squad
-from pl_analytics.features.fpl import fixture_rows, latest_players, project_players
+from pl_analytics.features.fpl import (
+    expected_minutes_features,
+    fixture_rows,
+    latest_players,
+    project_players,
+)
 from pl_analytics.features.fpl_optimizer import (
     backtest_summary,
     optimize_chip_schedule,
@@ -122,7 +127,58 @@ def test_fpl_projection_preserves_scope_and_fixture_horizons():
     assert result.projected_points_3.ge(result.projected_points_1).all()
     assert result.projection_low_1.le(result.projected_points_1).all()
     assert result.projection_high_1.ge(result.projected_points_1).all()
+    assert result.appearance_probability.ge(result.sixty_probability).all()
+    assert {
+        "xpts_appearance_1",
+        "xpts_attack_1",
+        "xpts_clean_sheet_1",
+        "xpts_saves_1",
+    } <= set(result)
     assert fixtures.loc[fixtures.club_name.eq("Alpha"), "difficulty"].iloc[0] == 1
+
+
+def test_expected_minutes_favors_recent_starts_over_old_absences():
+    players = pd.DataFrame(
+        [
+            {
+                "source_player_id": 1,
+                "position_group": "DEF",
+                "minutes": 270,
+                "starts": 3,
+                "gw": 5,
+                "status": "a",
+                "chance_of_playing": None,
+            },
+            {
+                "source_player_id": 2,
+                "position_group": "DEF",
+                "minutes": 180,
+                "starts": 2,
+                "gw": 5,
+                "status": "a",
+                "chance_of_playing": None,
+            },
+        ]
+    )
+    rows = []
+    patterns = {1: [0, 0, 90, 90, 90], 2: [90, 90, 0, 0, 0]}
+    for player, minutes in patterns.items():
+        for gameweek, played in enumerate(minutes, start=1):
+            rows.append(
+                {
+                    "player_id": player,
+                    "match_id": f"{player}:{gameweek}",
+                    "gameweek": gameweek,
+                    "minutes_played": played,
+                    "start_min": 0 if played else None,
+                }
+            )
+    result = expected_minutes_features(players, pd.DataFrame(rows)).set_index(
+        "source_player_id"
+    )
+    assert result.loc[1, "expected_minutes"] > 65
+    assert result.loc[1, "expected_minutes"] > result.loc[2, "expected_minutes"]
+    assert result.loc[1, "start_probability"] > result.loc[2, "start_probability"]
 
 
 def _optimizer_pool() -> pd.DataFrame:

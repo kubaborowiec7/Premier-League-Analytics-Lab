@@ -274,10 +274,12 @@ rows, rebuilds player profiles and fits a versioned statistical match snapshot u
 only results before its origin. The frozen M6/M7 reports remain the evaluation record.
 Streamlit reads `live_catalog.json` only after all referenced files exist and verifies
 their hashes and shared origin. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
-`features/fpl.py` creates a scoped player snapshot, expands future fixtures and applies
-the transparent rate/Elo projection baseline. `data/fpl.py` builds portable FPL tables;
+`features/fpl.py` creates a scoped player snapshot, estimates recent start/appearance/60+
+probabilities, expands future fixtures and applies the transparent event/Elo projection.
+`data/fpl.py` builds portable FPL tables;
 `dashboard/fpl.py` reads them without request-time fitting. Its only network action is
 an explicit session-only lookup of a public FPL team ID.
 `features/fpl_optimizer.py` contains the reusable mixed-integer squad constraints,
 legal-XI selection, chip signals and strictly prior-gameweek backtest. The dashboard
 performs optimization only after an explicit button click; it never changes an FPL team.
+Session-only xMins scenarios do not modify prepared artifacts.

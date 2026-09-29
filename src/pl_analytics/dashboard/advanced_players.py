@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.features.advanced_players import METRICS, PROFILES, peer_percentiles
 
 COLORS = ("#38bdf8", "#fb7185", "#a3e635", "#c084fc", "#fbbf24")
@@ -23,6 +24,7 @@ def radar_chart(players: pd.DataFrame, metrics: list[str]) -> go.Figure:
     labels = [METRICS[name].label for name in metrics]
     for color, (_, player) in zip(COLORS, players.iterrows(), strict=False):
         values = [player[f"{name}_percentile"] for name in metrics]
+        top_shares = [None if pd.isna(value) else max(1, 100 - float(value)) for value in values]
         complete = all(pd.notna(value) for value in values)
         values = [None if pd.isna(value) else float(value) for value in values]
         figure.add_trace(
@@ -36,7 +38,8 @@ def radar_chart(players: pd.DataFrame, metrics: list[str]) -> go.Figure:
                 fill="toself" if complete else "none",
                 opacity=0.8,
                 connectgaps=False,
-                hovertemplate="%{theta}<br>Percentile: %{r:.1f}<extra>%{fullData.name}</extra>",
+                customdata=top_shares + top_shares[:1],
+                hovertemplate="%{theta}<br>Top %{customdata:.0f}%<extra>%{fullData.name}</extra>",
             )
         )
     figure.update_layout(
@@ -78,7 +81,7 @@ def _performance(player: pd.Series, per90: bool) -> None:
                     if per90 or metric.kind != "count"
                     else f"{value:,.2f}".rstrip("0").rstrip(".")
                 )
-                rank = "—" if pd.isna(percentile) else f"P{percentile:.0f}"
+                rank = top_percent_label(percentile)
                 label = html.escape(metric.label)
                 rows.append(
                     f"<tr><td>{label}</td><td>{display}</td><td>{rank}</td>"
@@ -115,7 +118,7 @@ def render_advanced(
         step=30,
     )
     st.caption(
-        "Percentiles use the same competition, season and broad FPL position; at least five "
+        "Top-% ranks use the same competition, season and broad FPL position; at least five "
         "eligible peers and 90% metric coverage. Higher is the chosen direction, "
         "not overall quality. "
         "Fewer than 450 minutes gives an unstable early-season comparison."

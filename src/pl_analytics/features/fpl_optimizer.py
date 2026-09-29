@@ -8,6 +8,8 @@ import pandas as pd
 from scipy.optimize import Bounds, LinearConstraint, milp
 from scipy.sparse import lil_matrix
 
+from pl_analytics.features.fpl import expected_minutes_features
+
 SQUAD_POSITIONS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
 STARTER_LIMITS = {"GK": (1, 1), "DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}
 
@@ -242,13 +244,20 @@ def rolling_backtest(
     competition_id: str,
     season: str,
 ) -> pd.DataFrame:
-    """Evaluate a strictly prior-gameweek expected-points baseline against next-GW points."""
+    """Evaluate prior-only minutes and point rates against the following gameweek."""
     stats = playerstats.copy()
     required = {"id", "gw", "event_points", "points_per_game", "minutes"}
     if not required <= set(stats) or not {"player_id", "position"} <= set(players):
         raise ValueError("Backtest inputs are incomplete")
-    for column in ("gw", "event_points", "points_per_game", "minutes"):
+    for column in ("gw", "event_points", "points_per_game", "minutes", "starts"):
+        if column not in stats:
+            stats[column] = 0
         stats[column] = pd.to_numeric(stats[column], errors="coerce")
+    stats = stats.sort_values(["id", "gw"])
+    if "total_points" not in stats:
+        stats["total_points"] = stats.groupby("id").event_points.cumsum()
+    stats["fixture_minutes"] = stats.groupby("id").minutes.diff().fillna(stats.minutes).clip(0, 90)
+    stats["fixture_starts"] = stats.groupby("id").starts.diff().fillna(stats.starts).clip(0, 1)
     identity = players[["player_id", "position"]].copy()
     identity["position_group"] = identity.position.map(position_map).fillna("UNKNOWN")
     rows = []
@@ -259,30 +268,69 @@ def rolling_backtest(
             .sort_values("gw")
             .drop_duplicates("id", keep="last")
         )
-        actual = stats.loc[stats.gw.eq(target_gw), ["id", "event_points"]].rename(
-            columns={"event_points": "actual_points"}
+        actual = stats.loc[
+            stats.gw.eq(target_gw), ["id", "event_points", "fixture_minutes"]
+        ].rename(
+            columns={"event_points": "actual_points", "fixture_minutes": "actual_minutes"}
         )
         frame = prior.merge(identity, left_on="id", right_on="player_id", validate="many_to_one")
         frame = frame.merge(actual, on="id", validate="one_to_one")
-        frame["reliability"] = frame.minutes / (frame.minutes + 450)
-        median = frame.groupby("position_group").points_per_game.transform("median").fillna(2.0)
-        frame["predicted_points"] = (
-            frame.reliability * frame.points_per_game.fillna(median)
-            + (1 - frame.reliability) * median
-        )
-        chance = pd.to_numeric(
+        frame = frame.loc[frame.minutes.gt(0)].copy()
+        if frame.empty:
+            continue
+        frame["source_player_id"] = frame.id.astype(int)
+        frame["gw"] = target_gw - 1
+        frame["chance_of_playing"] = pd.to_numeric(
             frame.get("chance_of_playing_next_round", pd.Series(np.nan, index=frame.index)),
             errors="coerce",
         )
-        status = frame.get("status", pd.Series("a", index=frame.index)).fillna("a")
-        availability = chance.div(100).where(
-            chance.notna(), status.map({"a": 1, "d": 0.5}).fillna(0)
+        frame["status"] = frame.get("status", pd.Series("a", index=frame.index)).fillna("a")
+        past = stats.loc[stats.gw.lt(target_gw)].merge(
+            identity, left_on="id", right_on="player_id", validate="many_to_one"
         )
-        frame["predicted_points"] *= availability.clip(0, 1)
-        frame["baseline_points"] = median
+        appearances = pd.DataFrame(
+            {
+                "player_id": past.id,
+                "match_id": past.id.astype(str) + ":gw" + past.gw.astype(int).astype(str),
+                "gameweek": past.gw,
+                "minutes_played": past.fixture_minutes,
+                "start_min": np.where(past.fixture_starts.gt(0), 0, 60),
+            }
+        )
+        minute_frame = expected_minutes_features(frame, appearances)
+        frame = frame.drop(
+            columns=[
+                "availability_probability",
+                "start_probability",
+                "appearance_probability",
+                "sixty_probability",
+                "expected_minutes",
+                "minutes_model_matches",
+            ],
+            errors="ignore",
+        ).merge(
+            minute_frame[
+                [
+                    "source_player_id",
+                    "expected_minutes",
+                    "start_probability",
+                    "appearance_probability",
+                    "sixty_probability",
+                ]
+            ],
+            on="source_player_id",
+            validate="one_to_one",
+        )
+        observed_per90 = frame.total_points * 90 / frame.minutes
+        median_per90 = observed_per90.groupby(frame.position_group).transform("median").fillna(2)
+        reliability = frame.minutes / (frame.minutes + 450)
+        shrunk_per90 = reliability * observed_per90 + (1 - reliability) * median_per90
+        frame["predicted_points"] = shrunk_per90 * frame.expected_minutes / 90
+        active_ppg = frame.points_per_game.where(frame.minutes.gt(0))
+        median_ppg = active_ppg.groupby(frame.position_group).transform("median").fillna(2)
+        frame["baseline_points"] = median_ppg
         frame["origin_gw"] = target_gw - 1
         frame["target_gw"] = target_gw
-        frame["source_player_id"] = frame.id.astype(int)
         frame["competition_id"] = competition_id
         frame["season"] = season
         rows.append(
@@ -294,6 +342,11 @@ def rolling_backtest(
                     "position_group",
                     "origin_gw",
                     "target_gw",
+                    "expected_minutes",
+                    "actual_minutes",
+                    "start_probability",
+                    "appearance_probability",
+                    "sixty_probability",
                     "predicted_points",
                     "baseline_points",
                     "actual_points",
@@ -309,6 +362,7 @@ def backtest_summary(backtest: pd.DataFrame) -> dict:
     """Summarize expected-points error and rank association without hiding sample size."""
     error = backtest.predicted_points - backtest.actual_points
     baseline_error = backtest.baseline_points - backtest.actual_points
+    minute_error = backtest.expected_minutes - backtest.actual_minutes
     correlations = [
         frame.predicted_points.corr(frame.actual_points, method="spearman")
         for _, frame in backtest.groupby("target_gw")
@@ -319,5 +373,9 @@ def backtest_summary(backtest: pd.DataFrame) -> dict:
         "mae": float(error.abs().mean()),
         "rmse": float(np.sqrt(np.mean(error**2))),
         "baseline_mae": float(baseline_error.abs().mean()),
+        "minutes_mae": float(minute_error.abs().mean()),
+        "mean_predicted_points": float(backtest.predicted_points.mean()),
+        "mean_actual_points": float(backtest.actual_points.mean()),
+        "zero_point_rate": float(backtest.actual_points.eq(0).mean()),
         "mean_spearman": float(np.nanmean(correlations)),
     }

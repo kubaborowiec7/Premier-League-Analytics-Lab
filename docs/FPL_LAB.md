@@ -12,6 +12,11 @@ backtest.
 M16 replaces the season-average minutes baseline with a recency-weighted availability
 model and expands expected points to the main position-specific FPL scoring events.
 
+M17 adds surname search to Player Picks, difficulty-colored fixture cells and suggested
+same-position replacements in the Transfers tab. Suggestions respect the selected
+purchase budget and minimum modelled playing time; the full My Team optimizer remains
+responsible for club-limit, squad-shape and transfer-hit constraints.
+
 ## Rebuild
 
 ```bash
@@ -21,6 +26,7 @@ python scripts/refresh_current_data.py
 The refresh pins one FPL-Core-Insights commit, archives every fixture snapshot and
 writes `data/processed/fpl/players.parquet`, `fixtures.parquet` and `metadata.json`.
 It also writes `backtest.parquet` and `backtest.json`.
+The same build writes `standings.parquet` for the League Table page.
 Raw snapshots remain immutable. GitHub Actions uploads these files with the other
 portable current-data artifacts.
 

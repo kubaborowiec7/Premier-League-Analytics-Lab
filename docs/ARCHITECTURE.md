@@ -283,3 +283,6 @@ an explicit session-only lookup of a public FPL team ID.
 legal-XI selection, chip signals and strictly prior-gameweek backtest. The dashboard
 performs optimization only after an explicit button click; it never changes an FPL team.
 Session-only xMins scenarios do not modify prepared artifacts.
+The same current-source feature layer builds observed standings and derives match xPoints
+from independent Poisson score probabilities parameterized by recorded home/away xG.
+`dashboard/standings.py` reads this prepared table and performs no request-time modelling.

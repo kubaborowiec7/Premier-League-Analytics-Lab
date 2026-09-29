@@ -1,7 +1,7 @@
 # Premier League Analytics Lab
 
 A reproducible football analytics platform: **player performance, scouting, editorial
-market-value estimation and probabilistic match forecasting**, presented in a seven-page
+market-value estimation and probabilistic match forecasting**, presented in a nine-page
 Streamlit dashboard. Python and PostgreSQL pipelines retain source provenance and
 competition/season context; chronological experiments compare simple baselines with ML.
 
@@ -46,6 +46,7 @@ scatterplots. Its player shortcut opens the same season and player in Player Exp
 | Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
 | Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
 | Teams | Sortable squad statistics, team/league cohorts and up to five-player radar/scatter comparisons |
+| League Table | Current standings with xG, xGA, xGD, xPoints and actual-minus-expected points |
 | FPL Decision Lab | Recency-based xMins, event-based 1/3/5-GW xPts, fixture ticker, optimizer and optional public squad |
 | Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
 | Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |

@@ -153,6 +153,125 @@ def fixture_rows(matches: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
     return result.sort_values(["gameweek", "kickoff_time", "club_name"]).reset_index(drop=True)
 
 
+def league_table(
+    matches: pd.DataFrame,
+    teams: pd.DataFrame,
+    *,
+    competition_id: str,
+    season: str,
+) -> pd.DataFrame:
+    """Build observed standings plus xG-derived expected points from completed matches."""
+    required_matches = {
+        "match_id",
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+        "home_expected_goals_xg",
+        "away_expected_goals_xg",
+        "finished",
+    }
+    if not required_matches <= set(matches) or not {"code", "name", "short_name"} <= set(teams):
+        raise ValueError("League-table source fields are missing")
+    completed = matches.loc[matches.finished.astype(str).str.lower().isin({"true", "1"})].copy()
+    if completed.empty or completed.match_id.duplicated().any():
+        raise ValueError("Completed league matches are empty or duplicated")
+    for column in (
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+        "home_expected_goals_xg",
+        "away_expected_goals_xg",
+    ):
+        completed[column] = pd.to_numeric(completed[column], errors="coerce")
+    if completed[["home_team", "away_team", "home_score", "away_score"]].isna().any().any():
+        raise ValueError("Completed league match results are incomplete")
+
+    rows: list[dict[str, float | int]] = []
+    score_counts = np.arange(13)
+    for match in completed.itertuples(index=False):
+        home_goals, away_goals = int(match.home_score), int(match.away_score)
+        home_xg = float(match.home_expected_goals_xg)
+        away_xg = float(match.away_expected_goals_xg)
+        home_xpoints = away_xpoints = np.nan
+        if np.isfinite(home_xg) and np.isfinite(away_xg):
+            matrix = np.outer(
+                poisson.pmf(score_counts, home_xg), poisson.pmf(score_counts, away_xg)
+            )
+            matrix /= matrix.sum()
+            draw = float(np.trace(matrix))
+            home_win = float(np.tril(matrix, -1).sum())
+            away_win = float(np.triu(matrix, 1).sum())
+            home_xpoints = 3 * home_win + draw
+            away_xpoints = 3 * away_win + draw
+        for venue, club, goals_for, goals_against, xg_for, xg_against, xpoints in (
+            (
+                "H",
+                int(match.home_team),
+                home_goals,
+                away_goals,
+                home_xg,
+                away_xg,
+                home_xpoints,
+            ),
+            (
+                "A",
+                int(match.away_team),
+                away_goals,
+                home_goals,
+                away_xg,
+                home_xg,
+                away_xpoints,
+            ),
+        ):
+            rows.append(
+                {
+                    "club_code": club,
+                    "venue": venue,
+                    "goals_for": goals_for,
+                    "goals_against": goals_against,
+                    "win": int(goals_for > goals_against),
+                    "draw": int(goals_for == goals_against),
+                    "loss": int(goals_for < goals_against),
+                    "points": 3 * int(goals_for > goals_against) + int(goals_for == goals_against),
+                    "expected_goals": xg_for,
+                    "expected_goals_against": xg_against,
+                    "expected_points": xpoints,
+                }
+            )
+    long = pd.DataFrame(rows)
+    table = long.groupby("club_code", as_index=False).agg(
+        played=("club_code", "size"),
+        wins=("win", "sum"),
+        draws=("draw", "sum"),
+        losses=("loss", "sum"),
+        goals_for=("goals_for", "sum"),
+        goals_against=("goals_against", "sum"),
+        points=("points", "sum"),
+        expected_goals=("expected_goals", "sum"),
+        expected_goals_against=("expected_goals_against", "sum"),
+        expected_points=("expected_points", lambda values: values.sum(min_count=1)),
+        xg_matches=("expected_points", "count"),
+    )
+    clubs = teams[["code", "name", "short_name"]].rename(
+        columns={"code": "club_code", "name": "club_name", "short_name": "club_short_name"}
+    )
+    table = table.merge(clubs, on="club_code", validate="one_to_one")
+    table["goal_difference"] = table.goals_for - table.goals_against
+    table["expected_goal_difference"] = table.expected_goals - table.expected_goals_against
+    table["expected_points_difference"] = table.points - table.expected_points
+    table["competition_id"] = competition_id
+    table["season"] = season
+    table["club_id"] = "fpl:club:" + table.club_code.astype(int).astype(str)
+    table = table.sort_values(
+        ["points", "goal_difference", "goals_for", "club_name"],
+        ascending=[False, False, False, True],
+    ).reset_index(drop=True)
+    table.insert(0, "position", np.arange(1, len(table) + 1))
+    return table
+
+
 def _availability(row: pd.Series) -> float:
     chance = row.chance_of_playing
     if pd.notna(chance):

@@ -8,7 +8,7 @@ import httpx
 import pandas as pd
 
 from pl_analytics.data.snapshots import Snapshot, SnapshotStore
-from pl_analytics.features.fpl import fixture_rows, latest_players, project_players
+from pl_analytics.features.fpl import fixture_rows, latest_players, league_table, project_players
 from pl_analytics.features.fpl_optimizer import backtest_summary, rolling_backtest
 
 
@@ -161,6 +161,12 @@ def build_fpl_artifacts(
         position_map=config["position_map"],
     )
     fixtures = fixture_rows(matches, teams_source)
+    standings = league_table(
+        matches,
+        teams_source,
+        competition_id=config["competition_id"],
+        season=season["season"],
+    )
     projections = project_players(players, history, fixtures, appearances=appearances)
     backtest = rolling_backtest(
         playerstats,
@@ -173,6 +179,7 @@ def build_fpl_artifacts(
     destination.mkdir(parents=True, exist_ok=True)
     projections.to_parquet(destination / "players.parquet", index=False)
     fixtures.to_parquet(destination / "fixtures.parquet", index=False)
+    standings.to_parquet(destination / "standings.parquet", index=False)
     backtest.to_parquet(destination / "backtest.parquet", index=False)
     (destination / "backtest.json").write_text(
         json.dumps(backtest_report, indent=2) + "\n", encoding="utf-8"

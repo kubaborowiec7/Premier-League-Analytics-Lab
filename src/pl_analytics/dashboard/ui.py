@@ -28,6 +28,7 @@ PAGES = {
     "Player Explorer": "pages/1_Player_Explorer.py",
     "Scouting Finder": "pages/2_Scouting_Finder.py",
     "Teams": "pages/3_Teams.py",
+    "League Table": "pages/3_League_Table.py",
     "FPL Decision Lab": "pages/4_FPL_Decision_Lab.py",
     "Market Value": "pages/3_Market_Value.py",
     "Match Predictor": "pages/4_Match_Predictor.py",
@@ -468,6 +469,10 @@ def render(page: str = "Overview") -> None:
             _overview(tables)
         elif competition is None:
             _missing()
+        elif page == "League Table":
+            from pl_analytics.dashboard.standings import render_standings
+
+            render_standings(settings, competition)
         elif page in ("Player Explorer", "Scouting Finder", "Teams", "Market Value"):
             frame = tables["values" if page == "Market Value" else "players"]
             if frame.empty:

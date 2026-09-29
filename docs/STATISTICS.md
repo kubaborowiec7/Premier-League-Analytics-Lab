@@ -428,3 +428,18 @@ save awards, defensive-contribution thresholds and goals-conceded deductions. Th
 does not claim independence is literally true; a later joint simulation should connect
 legal line-ups, scorelines, player event shares and bonus. Chronological evaluation uses
 only snapshots and appearances before the target gameweek.
+
+## Expected league table
+
+The M17 league table keeps observed points and goals as the ranking basis. For every
+completed match with recorded expected goals, it treats home and away goals as
+independent Poisson variables with their observed xG values as rates. The score matrix
+is evaluated from 0 to 12 goals per team and produces home-win, draw and away-win
+probabilities. Match expected points are then:
+
+`xPts = 3 * P(win) + P(draw)`
+
+Team xG, xGA and xPts are summed over completed matches. `Pts-xPts` is descriptive: it
+shows the gap between actual results and the result probabilities implied by recorded
+xG. It is not a causal luck measure or a forecast of the next match. Matches without xG
+still contribute to the observed table and are excluded from expected-stat totals.

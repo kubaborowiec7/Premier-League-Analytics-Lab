@@ -237,6 +237,9 @@ payloads. Retrieval metadata, resolved commit and hashes are recorded in the ign
 operational manifest. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
 The cumulative `playerstats` snapshot provides defensive contributions from 2025/26
 onward. No value is backfilled for 2024/25.
+Completed current-season match snapshots also provide home/away xG. M17 uses those
+recorded values to calculate descriptive league-table xG, xGA and Poisson xPoints;
+missing match xG remains missing and is counted explicitly.
 The FPL Decision Lab additionally uses the official public Fantasy Premier League entry
 and event-picks JSON endpoints when `FPL_ENTRY_ID` is set. These calls are optional,
 require no login and are archived with retrieval metadata. Public entry data can expose

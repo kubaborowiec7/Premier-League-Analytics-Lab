@@ -111,7 +111,17 @@ def _picks(players: pd.DataFrame) -> None:
         float(players.price.max()),
         0.5,
     )
+    search = st.text_input(
+        "Search player",
+        placeholder="Type a surname, for example Konsa",
+        key="fpl-player-search",
+    ).strip()
     view = players.loc[players.position_group.isin(position) & players.price.le(max_price)].copy()
+    if search:
+        view = view.loc[view.player_name.str.contains(search, case=False, regex=False, na=False)]
+    if view.empty:
+        st.info("No players match the selected positions, price and name search.")
+        return
     projection = f"projected_points_{horizon}"
     columns = {
         "player_name": "Player",
@@ -222,19 +232,111 @@ def _ticker(fixtures: pd.DataFrame) -> None:
         aggfunc=lambda values: " / ".join(values),
     )
     ticker.columns = [f"GW{value}" for value in ticker.columns]
-    st.dataframe(ticker, width="stretch")
-    st.caption("Difficulty: 1 is easiest and 5 is hardest. A slash marks a double gameweek.")
+    colors = {1: "#15803d", 2: "#65a30d", 3: "#475569", 4: "#c2410c", 5: "#b91c1c"}
+
+    def fixture_style(value: object) -> str:
+        if pd.isna(value):
+            return ""
+        levels = []
+        for fixture in str(value).split(" / "):
+            try:
+                levels.append(int(fixture.rsplit("·", maxsplit=1)[-1].strip()))
+            except ValueError:
+                continue
+        level = max(levels) if levels else 3
+        return f"background-color: {colors[level]}; color: white; font-weight: 600"
+
+    st.dataframe(ticker.style.map(fixture_style), width="stretch")
+    badges = " ".join(
+        f"<span style='background:{color};color:white;padding:4px 9px;border-radius:6px'>"
+        f"{level}</span>"
+        for level, color in colors.items()
+    )
+    st.markdown(f"**Difficulty:** easiest&nbsp; {badges} &nbsp;hardest", unsafe_allow_html=True)
+    st.caption("A slash marks a double gameweek; its cell uses the harder fixture color.")
 
 
 def _comparison(players: pd.DataFrame) -> None:
     st.subheader("Transfer comparison")
-    names = players.sort_values("player_name").player_name.tolist()
-    left, right = st.columns(2)
+    horizon = st.segmented_control(
+        "Transfer horizon", [1, 3, 5], default=3, key="transfer-horizon"
+    )
+    projection = f"projected_points_{horizon}"
+    squad = st.session_state.get("fpl_squad")
+    if isinstance(squad, pd.DataFrame) and not squad.empty:
+        names = sorted(squad.player_name.unique())
+        st.caption("Player-out choices use the public squad loaded in My team.")
+    else:
+        names = (
+            players.loc[players.expected_minutes.gt(0)]
+            .sort_values("player_name")
+            .player_name.tolist()
+        )
+    left, middle = st.columns(2)
     outgoing = left.selectbox("Player out", names, index=0)
-    incoming = right.selectbox("Player in", names, index=min(1, len(names) - 1))
+    bank = middle.number_input(
+        "Money available in the bank (£m)", min_value=0.0, max_value=20.0, value=0.0, step=0.1
+    )
+    outgoing_row = players.loc[players.player_name.eq(outgoing)].iloc[0]
+    budget = float(outgoing_row.price + bank)
+    suggestions = players.loc[
+        players.position_group.eq(outgoing_row.position_group)
+        & players.price.le(budget)
+        & players.source_player_id.ne(outgoing_row.source_player_id)
+        & players.expected_minutes.ge(30)
+    ].copy()
+    suggestions["projected_gain"] = suggestions[projection] - float(outgoing_row[projection])
+    suggestions["value_score"] = suggestions[projection] / suggestions.price
+    suggestions = suggestions.sort_values(
+        ["projected_gain", "expected_minutes"], ascending=False
+    ).head(10)
+    if suggestions.empty:
+        st.info("No likely replacement fits this position and budget.")
+        return
+    incoming = st.selectbox("Player in", suggestions.player_name.tolist(), index=0)
+    st.markdown("**Suggested replacements**")
+    st.dataframe(
+        suggestions[
+            [
+                "player_name",
+                "club_short_name",
+                "price",
+                projection,
+                "projected_gain",
+                "expected_minutes",
+                "value_score",
+                f"fixtures_{horizon}",
+            ]
+        ].rename(
+            columns={
+                "player_name": "Player",
+                "club_short_name": "Club",
+                "price": "Price",
+                projection: f"xPts · {horizon} GW",
+                "projected_gain": "Gain vs out",
+                "expected_minutes": "xMins / fixture",
+                "value_score": "xPts / £m",
+                f"fixtures_{horizon}": "Fixtures",
+            }
+        ),
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "Price": st.column_config.NumberColumn(format="£%.1fm"),
+            f"xPts · {horizon} GW": st.column_config.NumberColumn(format="%.2f"),
+            "Gain vs out": st.column_config.NumberColumn(format="%+.2f"),
+            "xMins / fixture": st.column_config.NumberColumn(format="%.0f"),
+            "xPts / £m": st.column_config.NumberColumn(format="%.2f"),
+        },
+    )
+    st.caption(
+        "Suggestions keep the same position, respect the selected purchase budget and require "
+        "at least 30 modelled minutes per fixture. Club-limit and selling-price constraints are "
+        "applied only by the full My team optimizer."
+    )
     chosen = players.loc[players.player_name.isin([outgoing, incoming])]
     metrics = [
-        "projected_points_3",
+        projection,
         "expected_minutes",
         "price",
         "form",

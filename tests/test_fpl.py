@@ -8,6 +8,7 @@ from pl_analytics.features.fpl import (
     expected_minutes_features,
     fixture_rows,
     latest_players,
+    league_table,
     project_players,
 )
 from pl_analytics.features.fpl_optimizer import (
@@ -179,6 +180,35 @@ def test_expected_minutes_favors_recent_starts_over_old_absences():
     assert result.loc[1, "expected_minutes"] > 65
     assert result.loc[1, "expected_minutes"] > result.loc[2, "expected_minutes"]
     assert result.loc[1, "start_probability"] > result.loc[2, "start_probability"]
+
+
+def test_league_table_adds_xg_expected_points_without_changing_observed_order():
+    teams = pd.DataFrame(
+        [
+            {"code": 1, "name": "Alpha", "short_name": "ALP"},
+            {"code": 2, "name": "Beta", "short_name": "BET"},
+        ]
+    )
+    matches = pd.DataFrame(
+        [
+            {
+                "match_id": "m1",
+                "home_team": 1,
+                "away_team": 2,
+                "home_score": 1,
+                "away_score": 0,
+                "home_expected_goals_xg": 0.4,
+                "away_expected_goals_xg": 1.8,
+                "finished": True,
+            }
+        ]
+    )
+    result = league_table(matches, teams, competition_id="TEST", season="2026/27")
+    alpha, beta = result.set_index("club_name").loc[["Alpha", "Beta"]].itertuples()
+    assert alpha.position == 1 and alpha.points == 3 and alpha.goal_difference == 1
+    assert alpha.expected_goals == 0.4 and alpha.expected_goals_against == 1.8
+    assert alpha.expected_points < beta.expected_points
+    assert result.competition_id.eq("TEST").all()
 
 
 def _optimizer_pool() -> pd.DataFrame:

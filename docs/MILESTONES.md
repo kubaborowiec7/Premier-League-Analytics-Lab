@@ -449,3 +449,20 @@ percentiles remain unchanged.
 
 Suggested commit:
 `model: improve fpl minutes and points projections`
+
+---
+
+## M17 — League table and FPL decision UX
+
+User-requested extension after M16. A new League Table page combines observed standings
+with cumulative xG, xGA, xGD and xPoints. Match xPoints equal `3 × P(win) + P(draw)`
+from an independent Poisson score matrix parameterized by the recorded match xG; actual
+standings remain ordered by official points, goal difference and goals scored.
+
+The FPL fixture ticker colors every game from difficulty 1–5, Player Picks supports
+case-insensitive surname search, and Transfers ranks same-position replacements within
+the selected budget by horizon xPts gain. Suggested replacements require at least 30
+expected minutes per fixture and state that full squad constraints belong to My Team.
+
+Suggested commit:
+`feat: add advanced standings and fpl transfer suggestions`

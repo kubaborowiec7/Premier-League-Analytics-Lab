@@ -59,7 +59,7 @@ METRICS = {
     "recoveries": Metric("Recoveries", "Defending"),
     "blocks": Metric("Blocks", "Defending"),
     "defensive_contribution": Metric(
-        "Defensive contributions", "Defending", aggregation="season_total"
+        "Defensive contributions (actions)", "Defending", aggregation="season_total"
     ),
     "headed_clearances": Metric("Headed clearances", "Defending"),
     "dribbled_past": Metric("Dribbled past", "Defending", lower_better=True),

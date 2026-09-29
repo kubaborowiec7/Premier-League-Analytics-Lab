@@ -63,9 +63,9 @@ Possession, Defending, Discipline and Goalkeeping. It includes goals, xG, shots,
 shots on target, penalties, assists, xA, accurate passes/crosses/long balls, key passes,
 dribbles, duels, aerials, touches, dispossessions, tackles, interceptions, recoveries,
 blocks, clearances, fouls, offsides and provider goalkeeper measures where recorded.
-FPL defensive contributions are loaded from cumulative season totals for 2025/26
+FPL defensive-contribution actions are loaded from cumulative season totals for 2025/26
 and the current 2026/27 snapshot. They remain unavailable for 2024/25 because the
-pinned source predates that field.
+pinned source predates that field. These are qualifying actions, not awarded FPL points.
 
 Absent fields are shown as **—**, never fabricated: progressive passes/carries,
 forward-pass completion, headed goals and big chances created are not supplied by

@@ -30,6 +30,16 @@ def _canonical_digest(frame: pd.DataFrame) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _latest_mutable_snapshot(raw_dir: Path, dataset_version: str) -> Snapshot | None:
+    """Find the newest verified archive for one explicitly mutable dataset version."""
+    snapshots = []
+    for manifest in (raw_dir / SOURCE).glob("*/metadata.json"):
+        snapshot = Snapshot.read(manifest)
+        if snapshot.dataset_version == dataset_version:
+            snapshots.append(snapshot)
+    return max(snapshots, key=lambda item: item.retrieved_at) if snapshots else None
+
+
 def read_match_history(
     config: dict, raw_dir: Path, *, end_date: str, download: bool = False
 ) -> tuple[pd.DataFrame, list[dict]]:
@@ -43,6 +53,12 @@ def read_match_history(
         sidecar = raw_dir / SOURCE / digest / "metadata.json"
         if sidecar.exists():
             snapshot = Snapshot.read(sidecar)
+        elif mutable_current and (
+            archived := _latest_mutable_snapshot(
+                raw_dir, f"{config['source_code']}-{season['source_season']}"
+            )
+        ):
+            snapshot = archived
         elif download:
             snapshot = download_season(
                 SnapshotStore(raw_dir),

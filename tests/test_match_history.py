@@ -52,7 +52,7 @@ def test_mutable_current_archive_must_reproduce_frozen_cutoff(tmp_path, monkeypa
         Path(__file__).parent / "fixtures/matches.csv",
         source_name=SOURCE,
         source_url="https://example.test/current.csv",
-        dataset_version="current",
+        dataset_version="E0-2324",
         license_note="Generated fixture",
     )
     monkeypatch.setattr(
@@ -81,6 +81,8 @@ def test_mutable_current_archive_must_reproduce_frozen_cutoff(tmp_path, monkeypa
     assert len(frame) == 1
     assert sources[0]["sha256"] == snapshot.sha256
     assert pd.Timestamp(frame.match_day.max()) == pd.Timestamp("2023-08-12", tz="UTC")
+    replay, _ = read_match_history(config, raw, end_date="2023-08-12")
+    assert replay.match_id.tolist() == frame.match_id.tolist()
     season["expected_canonical_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="Canonical match facts changed"):
         read_match_history(config, raw, end_date="2023-08-12", download=True)

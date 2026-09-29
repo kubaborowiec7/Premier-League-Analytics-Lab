@@ -103,6 +103,19 @@ def fetch_public_team(
     return entry, picks
 
 
+def map_public_squad(picks: pd.DataFrame, players: pd.DataFrame) -> pd.DataFrame:
+    """Map 15 public picks to prepared players without colliding position fields."""
+    squad = picks.rename(columns={"position": "squad_position"}).merge(
+        players,
+        left_on="element",
+        right_on="source_player_id",
+        validate="one_to_one",
+    )
+    if len(squad) != 15:
+        raise ValueError("Some squad players are absent from current artifacts")
+    return squad
+
+
 def build_fpl_artifacts(
     config: dict,
     raw_dir: Path,
@@ -147,14 +160,7 @@ def build_fpl_artifacts(
         entry, picks, manager_sources = download_manager_team(
             SnapshotStore(raw_dir), entry_id=entry_id, event=event
         )
-        squad = picks.merge(
-            projections,
-            left_on="element",
-            right_on="source_player_id",
-            validate="one_to_one",
-        )
-        if len(squad) != 15:
-            raise ValueError("Configured FPL squad does not contain 15 mapped players")
+        squad = map_public_squad(picks, projections)
         squad.to_parquet(squad_path, index=False)
         manager = {
             "entry_id": entry_id,

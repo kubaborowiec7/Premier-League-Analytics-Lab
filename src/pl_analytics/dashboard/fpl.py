@@ -6,7 +6,7 @@ import streamlit as st
 
 from pl_analytics.config import Settings
 from pl_analytics.dashboard.data import ArtifactError, report, table
-from pl_analytics.data.fpl import fetch_public_team
+from pl_analytics.data.fpl import fetch_public_team, map_public_squad
 
 
 def _money(value: object) -> str:
@@ -163,14 +163,7 @@ def _my_team(settings: Settings, players: pd.DataFrame, metadata: dict) -> None:
                     entry_id=entry_id,
                     event=int(metadata["current_gameweek"]),
                 )
-                loaded = picks.merge(
-                    players,
-                    left_on="element",
-                    right_on="source_player_id",
-                    validate="one_to_one",
-                )
-                if len(loaded) != 15:
-                    raise ValueError("Some squad players are absent from current artifacts")
+                loaded = map_public_squad(picks, players)
                 st.session_state["fpl_entry_id"] = entry_id
                 st.session_state["fpl_squad"] = loaded
                 st.session_state["fpl_manager"] = {
@@ -203,8 +196,8 @@ def _my_team(settings: Settings, players: pd.DataFrame, metadata: dict) -> None:
     second.metric("Squad value", _money((manager.get("team_value") or 0) / 10))
     third.metric("Bank", _money((manager.get("bank") or 0) / 10))
     st.dataframe(
-        squad.sort_values("position")[[
-            "position", "player_name", "club_short_name", "price", "projected_points_3",
+        squad.sort_values("squad_position")[[
+            "squad_position", "player_name", "club_short_name", "price", "projected_points_3",
             "fixtures_3", "is_captain", "is_vice_captain",
         ]],
         hide_index=True,

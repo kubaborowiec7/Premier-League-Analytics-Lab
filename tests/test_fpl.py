@@ -3,7 +3,7 @@
 import httpx
 import pandas as pd
 
-from pl_analytics.data.fpl import fetch_public_team
+from pl_analytics.data.fpl import fetch_public_team, map_public_squad
 from pl_analytics.features.fpl import fixture_rows, latest_players, project_players
 
 
@@ -31,6 +31,13 @@ def test_public_team_fetch_requires_complete_unique_squad():
         entry, picks = fetch_public_team(entry_id=123, event=5, client=client)
     assert entry["name"] == "Test XI"
     assert len(picks) == 15 and picks.element.is_unique
+    assert "position" in picks
+    players = pd.DataFrame(
+        {"source_player_id": range(1, 16), "position": ["Defender"] * 15}
+    )
+    squad = map_public_squad(picks, players)
+    assert len(squad) == 15
+    assert {"squad_position", "position"} <= set(squad)
 
 
 def test_fpl_projection_preserves_scope_and_fixture_horizons():

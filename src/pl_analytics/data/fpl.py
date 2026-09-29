@@ -8,6 +8,7 @@ import pandas as pd
 
 from pl_analytics.data.snapshots import Snapshot, SnapshotStore
 from pl_analytics.features.fpl import fixture_rows, latest_players, project_players
+from pl_analytics.features.fpl_optimizer import backtest_summary, rolling_backtest
 
 
 def _read_frame(raw_dir: Path, entry: dict, *, source_kind: str) -> pd.DataFrame:
@@ -149,9 +150,21 @@ def build_fpl_artifacts(
     )
     fixtures = fixture_rows(matches, teams_source)
     projections = project_players(players, history, fixtures)
+    backtest = rolling_backtest(
+        playerstats,
+        players_source,
+        position_map=config["position_map"],
+        competition_id=config["competition_id"],
+        season=season["season"],
+    )
+    backtest_report = backtest_summary(backtest)
     destination.mkdir(parents=True, exist_ok=True)
     projections.to_parquet(destination / "players.parquet", index=False)
     fixtures.to_parquet(destination / "fixtures.parquet", index=False)
+    backtest.to_parquet(destination / "backtest.parquet", index=False)
+    (destination / "backtest.json").write_text(
+        json.dumps(backtest_report, indent=2) + "\n", encoding="utf-8"
+    )
     manager = None
     manager_sources: list[dict] = []
     squad_path = destination / "squad.parquet"
@@ -185,6 +198,7 @@ def build_fpl_artifacts(
         "manager": manager,
         "manager_sources": manager_sources,
         "method": "transparent-rate-elo-v1",
+        "backtest": backtest_report,
     }
     (destination / "metadata.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"

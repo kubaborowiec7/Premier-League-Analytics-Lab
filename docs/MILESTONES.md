@@ -414,3 +414,18 @@ See [FPL_LAB.md](FPL_LAB.md).
 
 Suggested commit:
 `feat: add fpl decision lab`
+
+---
+
+## M15 — FPL optimization and backtesting
+
+User-requested extension after M14. My Team now selects the highest-projected legal XI
+and captain and displays them on an interactive pitch. A mixed-integer optimizer applies
+official squad, formation, club, budget and transfer constraints, subtracts configurable
+hit costs and emits explainable chip signals. A strictly chronological GW2–GW5 pilot
+compares prior-snapshot expected points with observed next-gameweek points and a position
+baseline. Selling prices and a season-wide chip schedule remain unavailable, so current
+prices and threshold-based chip advice are labeled explicitly.
+
+Suggested commit:
+`feat: optimize fpl squad and lineup decisions`

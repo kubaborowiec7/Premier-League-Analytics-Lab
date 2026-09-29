@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-HORIZONS = (1, 3, 5)
+HORIZONS = (1, 2, 3, 4, 5)
 GOAL_POINTS = {"GK": 10.0, "DEF": 6.0, "MID": 5.0, "FWD": 4.0}
 CLEAN_SHEET_POINTS = {"GK": 4.0, "DEF": 4.0, "MID": 1.0, "FWD": 0.0}
 
@@ -231,4 +231,9 @@ def project_players(
         result[f"projection_low_{horizon}"] = np.maximum(0, np.asarray(points) - spread)
         result[f"projection_high_{horizon}"] = np.asarray(points) + spread
         result[f"fixtures_{horizon}"] = labels
+    previous = np.zeros(len(result))
+    for horizon, gameweek in enumerate(future_gameweeks[: max(horizon_values)], start=1):
+        cumulative = result[f"projected_points_{horizon}"].to_numpy(float)
+        result[f"projected_points_gw_{int(gameweek)}"] = np.maximum(0, cumulative - previous)
+        previous = cumulative
     return result

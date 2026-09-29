@@ -276,4 +276,8 @@ Streamlit reads `live_catalog.json` only after all referenced files exist and ve
 their hashes and shared origin. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
 `features/fpl.py` creates a scoped player snapshot, expands future fixtures and applies
 the transparent rate/Elo projection baseline. `data/fpl.py` builds portable FPL tables;
-`dashboard/fpl.py` reads them without network access or request-time fitting.
+`dashboard/fpl.py` reads them without request-time fitting. Its only network action is
+an explicit session-only lookup of a public FPL team ID.
+`features/fpl_optimizer.py` contains the reusable mixed-integer squad constraints,
+legal-XI selection, chip signals and strictly prior-gameweek backtest. The dashboard
+performs optimization only after an explicit button click; it never changes an FPL team.

@@ -72,6 +72,8 @@ the web process. Streamlit remains read-only and never downloads or fits on a bu
 click. The sole interactive data request is the explicit public-team lookup in FPL
 Decision Lab; it remains in session memory and sends no credentials. See
 [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
-FPL Decision Lab uses separately prepared current-season projections. Its five tabs
-cover player picks, fixtures, transfers, captaincy and an optional public squad. See
+FPL Decision Lab uses separately prepared current-season projections. Its six tabs
+cover player picks, fixtures, transfers, captaincy, an optional public squad and the
+rolling backtest. My Team displays the recommended legal XI on an interactive pitch
+and runs the constrained transfer/chip optimizer only when requested. See
 [FPL_LAB.md](FPL_LAB.md) for the projection formula and limits.

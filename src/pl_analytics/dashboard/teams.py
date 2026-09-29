@@ -140,9 +140,13 @@ def render_teams(frame: pd.DataFrame) -> None:
     ranked_team = cohort_percentiles(filtered, metrics=tuple(metrics), min_minutes=minimum)
     ranked = (league_squad if context == "League" else ranked_team).copy()
 
+    ranking_role = position if position != "All" else "DEF"
+    ranking_defaults = [name for name in PROFILES.get(ranking_role, ()) if name in metrics]
+    rank_default = ranking_defaults[0] if ranking_defaults else metrics[0]
     rank_metric = st.selectbox(
         "Rank displayed in the table",
         metrics,
+        index=metrics.index(rank_default),
         format_func=lambda name: METRICS[name].label,
     )
     percentile_column = (

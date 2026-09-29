@@ -229,7 +229,7 @@ def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, m
     assert not app.error and not app.exception
     assert next(s for s in app.selectbox if s.label == "Season").value == "2025/26"
     assert next(s for s in app.selectbox if s.label == "Rank displayed in the table").value == (
-        "tackles_won"
+        "defensive_contribution"
     )
     assert len(app.dataframe[0].value) == 12
     assert any("Click any column header" in item.value for item in app.caption)

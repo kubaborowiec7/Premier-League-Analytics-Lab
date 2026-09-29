@@ -222,7 +222,7 @@ enabled by supplying the correct source mapping rather than copying the entire l
 ## Advanced player statistics: FPL Core published snapshots
 
 The extension uses [olbauday/FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights)
-CSV exports at commit `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb`, pinned with 92 file
+CSV exports at commit `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb`, pinned with 93 file
 hashes in `data/manifests/advanced_players.json`. Coverage: 2024/25, 2025/26 and
 40 matches of 2026/27. The publisher permits reuse with attribution requested;
 upstream-provider rights are not independently granted here. No underlying sports
@@ -235,3 +235,5 @@ files and only gameweeks containing a completed fixture. Football-Data's current
 URL is also archived by content hash on every run. Mutable URLs never overwrite prior
 payloads. Retrieval metadata, resolved commit and hashes are recorded in the ignored
 operational manifest. See [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
+The cumulative `playerstats` snapshot provides defensive contributions from 2025/26
+onward. No value is backfilled for 2024/25.

@@ -64,6 +64,12 @@
           "sha256": "8bf02fae3e246d6540a925ff4c1011d9656a8dad20ec19545dbfefb741cb93ce"
         },
         {
+          "kind": "playerstats",
+          "path": "data/2025-2026/playerstats.csv",
+          "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/playerstats.csv",
+          "sha256": "45deee671ee07bd413422ecdf0a40322abffc186d2fe4f953d17456d9b58ea76"
+        },
+        {
           "kind": "appearances",
           "path": "data/2025-2026/By Tournament/Premier League/GW1/playermatchstats.csv",
           "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb/data/2025-2026/By%20Tournament/Premier%20League/GW1/playermatchstats.csv",

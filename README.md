@@ -29,6 +29,8 @@ python scripts/refresh_current_data.py
 The published source covers most requested shooting/passing/possession/defensive
 metrics, with meaningful gaps in the newest season. Progressive passes/carries and
 several other fields remain explicitly unavailable. [Definitions and reproduction](docs/ADVANCED_PLAYERS.md).
+FPL defensive contributions are included from 2025/26 onward where the source
+publishes them; 2024/25 remains blank rather than being estimated.
 
 The Teams workspace adds a sortable all-statistics squad table, Total/Per-90 values,
 team or role-matched league percentiles, five-player radar overlays and peer

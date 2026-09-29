@@ -58,6 +58,9 @@ METRICS = {
     "clearances": Metric("Clearances", "Defending"),
     "recoveries": Metric("Recoveries", "Defending"),
     "blocks": Metric("Blocks", "Defending"),
+    "defensive_contribution": Metric(
+        "Defensive contributions", "Defending", aggregation="season_total"
+    ),
     "headed_clearances": Metric("Headed clearances", "Defending"),
     "dribbled_past": Metric("Dribbled past", "Defending", lower_better=True),
     "fouls_committed": Metric("Fouls committed", "Discipline", lower_better=True),
@@ -77,6 +80,7 @@ METRICS = {
 
 PROFILES = {
     "DEF": (
+        "defensive_contribution",
         "tackles_won",
         "interceptions",
         "clearances",
@@ -226,6 +230,7 @@ def peer_percentiles(
             result.loc[indices, f"{name}_percentile"] = (
                 100 - ranks if metric.lower_better else ranks
             )
+    result = result.copy()
     result["normalization_context"] = (
         result.competition_id + "|" + result.season + "|" + result.position_group
     )

@@ -104,13 +104,18 @@ def validate_season(
                 raise ValueError("Repeated player season totals have no valid gameweek")
             totals["gw"] = pd.to_numeric(totals.gw, errors="raise")
             totals = totals.sort_values("gw").drop_duplicates("id", keep="last")
-        totals = totals[["id", "yellow_cards", "red_cards"]].rename(columns={"id": "player_id"})
-        for name in ("yellow_cards", "red_cards"):
+        season_totals = [
+            name
+            for name, metric in METRICS.items()
+            if metric.aggregation == "season_total" and name in totals
+        ]
+        totals = totals[["id", *season_totals]].rename(columns={"id": "player_id"})
+        for name in season_totals:
             totals[name] = pd.to_numeric(totals[name], errors="raise")
             if totals[name].dropna().lt(0).any():
                 raise ValueError(f"Invalid metric: {name}")
         appearances = appearances.drop(
-            columns=["yellow_cards", "red_cards"], errors="ignore"
+            columns=season_totals, errors="ignore"
         ).merge(totals, on="player_id", how="left", validate="many_to_one")
     for name, metric in METRICS.items():
         if metric.kind == "ratio":

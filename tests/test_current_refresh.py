@@ -130,7 +130,7 @@ def test_player_season_totals_fill_cards_without_repeating_per_match():
     totals = pd.DataFrame(
         [
             dict(id=1, gw=1, yellow_cards=1, red_cards=0),
-            dict(id=1, gw=2, yellow_cards=3, red_cards=1),
+            dict(id=1, gw=2, yellow_cards=3, red_cards=1, defensive_contribution=18),
         ]
     )
     config = {
@@ -154,6 +154,8 @@ def test_player_season_totals_fill_cards_without_repeating_per_match():
     )
     profile = summarize_players(observations, "2026-09-29").iloc[0]
     assert profile.yellow_cards == 3 and profile.red_cards == 1
+    assert profile.defensive_contribution == 18
+    assert profile.defensive_contribution_per90 == 9
     assert profile.minutes == 180 and observations.match_id.nunique() == 2
     assert profile.yellow_cards_coverage == 1 and profile.yellow_cards_per90 == 1.5
 

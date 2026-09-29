@@ -15,7 +15,7 @@ Subsequent offline builds omit `--download`. The manifest
 `data/manifests/advanced_players.json` pins Git commit
 `d2b7c3a7f9bc7ba4781efef1fda2408b12d4d5cb` of
 [olbauday/FPL-Core-Insights](https://github.com/olbauday/FPL-Core-Insights),
-92 CSV files and their SHA-256 hashes. The additional season team tables map source
+93 CSV files and their SHA-256 hashes. The additional season team tables map source
 `team_code` values to canonical `fpl:club:*` identities and display names. It downloads only published GitHub CSVs,
 never underlying sports sites. Immutable payloads and retrieval metadata live under
 `data/raw/fpl-core.*`; derived files live under `data/processed/advanced/`.
@@ -63,12 +63,16 @@ Possession, Defending, Discipline and Goalkeeping. It includes goals, xG, shots,
 shots on target, penalties, assists, xA, accurate passes/crosses/long balls, key passes,
 dribbles, duels, aerials, touches, dispossessions, tackles, interceptions, recoveries,
 blocks, clearances, fouls, offsides and provider goalkeeper measures where recorded.
+FPL defensive contributions are loaded from cumulative season totals for 2025/26
+and the current 2026/27 snapshot. They remain unavailable for 2024/25 because the
+pinned source predates that field.
 
 Absent fields are shown as **—**, never fabricated: progressive passes/carries,
 forward-pass completion, headed goals and big chances created are not supplied by
-this adapter. Current-season yellow/red cards come from the latest cumulative
-player-season row published for each gameweek; historical pinned snapshots still
-lack those fields. Final-third passes are not relabelled as
+this adapter. Current-season yellow/red cards and defensive contributions come from
+the latest cumulative player-season row published for each gameweek. The pinned
+2025/26 season also supplies defensive contributions. Historical 2024/25 profiles
+still lack these fields. Final-third passes are not relabelled as
 progressive passes; ground duels are not relabelled as defensive-only duels.
 Some otherwise supported metrics are missing entirely from the newest snapshot.
 

@@ -56,7 +56,7 @@ local refresh, run the Python command above and reload the page.
   and a canonical result-fact hash; a locally archived original snapshot remains
   preferred.
 - Each current player refresh resolves all files to one Git commit. Season-level card
-  totals use the latest published `gw` row for each player.
+  and defensive-contribution totals use the latest published `gw` row for each player.
 - Progressive passes, progressive carries and forward-pass completion remain absent;
   the refresh does not infer them from unrelated fields.
 - Source publication can lag the final whistle. “Results through” in Match Predictor

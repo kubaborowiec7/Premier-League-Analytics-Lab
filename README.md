@@ -32,6 +32,11 @@ several other fields remain explicitly unavailable. [Definitions and reproductio
 FPL defensive contributions are included from 2025/26 onward where the source
 publishes them; 2024/25 remains blank rather than being estimated.
 
+Player Explorer and Scouting Finder also accept manual or CSV performance profiles for
+session-only comparison against the selected league cohort. Market Value accepts the
+eight frozen M5 inputs and calculates an explicitly hypothetical valuation scenario.
+[Import schema and limitations](docs/PLAYER_IMPORT.md).
+
 The Teams workspace adds a sortable all-statistics squad table, Total/Per-90 values,
 team or role-matched league Top-% ranks, five-player radar overlays and peer
 scatterplots. Its player shortcut opens the same season and player in Player Explorer.
@@ -43,12 +48,12 @@ scatterplots. Its player shortcut opens the same season and player in Player Exp
 | Page | Working functionality |
 |---|---|
 | Overview | Data-driven competition selector and coverage by module |
-| Player Explorer | 2023/24 legacy profiles plus three advanced seasons, position-aware metrics and radar overlays |
-| Scouting Finder | Comparable profiles with explicit candidate competitions, metric selection and exposure threshold |
+| Player Explorer | Advanced profiles, radar overlays and session-only manual/CSV player comparison |
+| Scouting Finder | Comparable profiles, candidate competitions and session-only manual/CSV references |
 | Teams | Sortable squad statistics, team/league cohorts and up to five-player radar/scatter comparisons |
 | League Table | Current standings with xG, xGA, xGD, xPoints and actual-minus-expected points |
 | FPL Decision Lab | Recency-based xMins, event-based 1/3/5-GW xPts, fixture ticker, optimizer and optional public squad |
-| Market Value | 502 dated player reviews, observed vs predicted values and nominal 90% intervals |
+| Market Value | Dated reviews plus manual/CSV scenarios using the frozen model and nominal intervals |
 | Match Predictor | Current-result H/D/A probabilities; short model names, explanations and Poisson/Dixon–Coles score matrices |
 | Model Lab | Chronological benchmark tables, selection decisions and model cards |
 

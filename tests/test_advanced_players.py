@@ -99,6 +99,27 @@ def test_peer_groups_and_direction_do_not_mix_seasons_or_roles(observations):
     assert "goals" not in PROFILES["DEF"] and "assists" not in PROFILES["DEF"]
 
 
+def test_comparison_only_player_is_scored_without_changing_league_distribution(observations):
+    profiles = summarize_players(observations, "2027-01-01")
+    baseline = peer_percentiles(profiles)
+    imported = profiles.loc[
+        profiles.player_id.eq("DEF0") & profiles.season.eq("2024/25")
+    ].copy()
+    imported["player_id"] = "user:example"
+    imported["player_name"] = "Imported Defender"
+    imported["tackles_per90"] = 999
+    imported["comparison_only"] = True
+    ranked = peer_percentiles(pd.concat([profiles, imported], ignore_index=True))
+    native = ranked.loc[ranked.player_id.eq("DEF0") & ranked.season.eq("2024/25")].iloc[0]
+    user = ranked.loc[ranked.player_id.eq("user:example")].iloc[0]
+    expected = baseline.loc[
+        baseline.player_id.eq("DEF0") & baseline.season.eq("2024/25"), "tackles_percentile"
+    ].iloc[0]
+    assert native.tackles_percentile == expected
+    assert user.tackles_percentile == 100
+    assert user.tackles_peers == 6
+
+
 def test_team_cohort_percentiles_follow_filtered_membership(observations):
     from pl_analytics.features.advanced_players import cohort_percentiles
 
@@ -212,7 +233,9 @@ def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, m
     app.switch_page("pages/1_Player_Explorer.py").run(timeout=30)
     assert not app.error and not app.exception
     assert next(s for s in app.selectbox if s.label == "Season").options == ["2025/26", "2024/25"]
-    app.multiselect[0].set_value(["TEST|DEF1|2025/26", "TEST|DEF2|2024/25"]).run(timeout=30)
+    next(
+        item for item in app.multiselect if item.label.startswith("Overlay players")
+    ).set_value(["TEST|DEF1|2025/26", "TEST|DEF2|2024/25"]).run(timeout=30)
     assert app.metric[2].value == "3" and not app.error
     app.radio[0].set_value("Per 90").run(timeout=30)
     assert not app.exception
@@ -222,7 +245,9 @@ def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, m
     app.switch_page("pages/2_Scouting_Finder.py").run(timeout=30)
     assert not app.error and not app.exception
     assert any("Closest profiles" in heading.value for heading in app.subheader)
-    app.number_input[0].set_value(1000).run(timeout=30)
+    next(item for item in app.number_input if item.label == "Peer minimum minutes").set_value(
+        1000
+    ).run(timeout=30)
     assert not app.error and not app.exception
     assert any("three shared eligible metrics" in item.value for item in app.info)
     app.switch_page("pages/3_Teams.py").run(timeout=30)

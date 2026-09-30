@@ -1,7 +1,8 @@
 # Dashboard
 
-M8 and later extensions provide eight read-only pages: Overview, Player Explorer,
-Scouting Finder, Teams, FPL Decision Lab, Market Value, Match Predictor and Model Lab. Competition options are populated
+M8 and later extensions provide nine pages: Overview, Player Explorer,
+Scouting Finder, Teams, League Table, FPL Decision Lab, Market Value, Match Predictor
+and Model Lab. Competition options are populated
 from available artifacts within `ACTIVE_COMPETITIONS`. Player and value pages
 have independent season filters; they do not imply matching historical coverage.
 
@@ -36,6 +37,13 @@ to PostgreSQL at startup or during prediction. Models must come from this projec
 trusted local build: pickle/joblib is executable and must never be user-uploaded.
 Missing modules remain usable as explanatory empty states; malformed artifacts
 produce sanitized rebuild messages without connection strings or private content.
+
+Player Explorer, Scouting Finder and Market Value may accept CSV/manual observations
+into Streamlit session memory. Performance records are placed in the selected peer
+cohort without changing its native reference distribution. Market-value scenarios load
+the checksum-verified frozen M5 bundle only after explicit submission. Neither path
+writes artifacts, trains models or accepts executable model uploads. See
+[PLAYER_IMPORT.md](PLAYER_IMPORT.md).
 
 Player statistics are limited to recorded goals, assists and cards; positions
 remain snapshot-based. Similarity holds season, date and position context fixed,

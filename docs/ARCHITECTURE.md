@@ -286,3 +286,8 @@ Session-only xMins scenarios do not modify prepared artifacts.
 The same current-source feature layer builds observed standings and derives match xPoints
 from independent Poisson score probabilities parameterized by recorded home/away xG.
 `dashboard/standings.py` reads this prepared table and performs no request-time modelling.
+`features/player_import.py` validates session inputs and maps them to existing analytical
+schemas. `dashboard/player_import.py` owns the manual/CSV controls and session state.
+Imported performance rows are comparison-only observations excluded from the native
+percentile reference set. Valuation scenarios verify and load the trusted M5 bundle only
+after submission; no uploaded executable artifact is accepted.

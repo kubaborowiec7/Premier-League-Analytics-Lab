@@ -99,6 +99,12 @@ metrics retain their units. Tables show per-metric coverage and peer ranks.
 The UI renders an 80th percentile as **Top 20%** in the documented peer cohort. Stored
 feature columns retain their numeric 0–100 percentiles for reproducible calculations.
 
+Player Explorer and Scouting Finder accept session-only manual or CSV profiles. Count
+statistics may be totals or per 90; percentages retain their 0–100 units and missing
+metrics stay missing. Imported records are scored against native league/season/role
+peers but do not enter that reference distribution, so native ranks do not move. See
+[PLAYER_IMPORT.md](PLAYER_IMPORT.md) for the schema and validation rules.
+
 Teams uses the same metric registry and adds a sortable squad table. Users can filter
 by season, club, role and minutes, switch between totals and per 90, and choose a
 role-matched league percentile or a percentile within the filtered squad. Radar and

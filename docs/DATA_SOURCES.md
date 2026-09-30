@@ -246,3 +246,11 @@ require no login and are archived with retrieval metadata. Public entry data can
 the team name; processed manager artifacts remain local and ignored by Git. Usage is
 subject to Premier League terms. Future fixture rows come from the same commit-pinned
 FPL-Core-Insights files as current player profiles.
+
+## User-supplied comparison rows
+
+M18 permits manual or CSV player observations for interactive comparison. These rows
+are unverified user inputs, not a reproducible project data source. They remain only in
+Streamlit session memory, are labelled as user imports and never enter raw, interim or
+processed storage. The UI does not claim a source URL, licence or independent accuracy
+for them. See [PLAYER_IMPORT.md](PLAYER_IMPORT.md).

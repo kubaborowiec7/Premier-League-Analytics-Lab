@@ -214,6 +214,9 @@ def peer_percentiles(
         [frame.drop(columns=list(extra), errors="ignore"), pd.DataFrame(extra, index=frame.index)],
         axis=1,
     ).copy()
+    comparison_only = result.get(
+        "comparison_only", pd.Series(False, index=result.index, dtype=bool)
+    ).fillna(False).astype(bool)
     for name, metric in METRICS.items():
         for _, peers in result.groupby(["competition_id", "season", "position_group"]):
             valid = (
@@ -221,13 +224,18 @@ def peer_percentiles(
                 & peers[f"{name}_coverage"].ge(min_coverage)
                 & peers[f"{name}_per90"].notna()
             )
-            indices = peers.index[valid]
-            result.loc[peers.index, f"{name}_peers"] = len(indices)
-            if len(indices) < min_peers or peers.position_group.iloc[0] == "UNKNOWN":
+            reference_indices = peers.index[valid & ~comparison_only.loc[peers.index]]
+            scored_indices = peers.index[valid]
+            result.loc[peers.index, f"{name}_peers"] = len(reference_indices)
+            if len(reference_indices) < min_peers or peers.position_group.iloc[0] == "UNKNOWN":
                 continue
-            values = peers.loc[indices, f"{name}_per90"]
-            ranks = (values.rank(method="average") - 0.5) / len(values) * 100
-            result.loc[indices, f"{name}_percentile"] = (
+            reference = peers.loc[reference_indices, f"{name}_per90"].to_numpy(float)
+            values = peers.loc[scored_indices, f"{name}_per90"].to_numpy(float)
+            ranks = (
+                (values[:, None] > reference).sum(axis=1)
+                + 0.5 * (values[:, None] == reference).sum(axis=1)
+            ) / len(reference) * 100
+            result.loc[scored_indices, f"{name}_percentile"] = (
                 100 - ranks if metric.lower_better else ranks
             )
     result = result.copy()

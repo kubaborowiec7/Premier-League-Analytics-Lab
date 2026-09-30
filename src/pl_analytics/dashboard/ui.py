@@ -130,8 +130,21 @@ def _players(frame: pd.DataFrame, settings) -> None:
     frame = _season(frame)
     if "source" in frame and frame.source.eq("FPL-Core-Insights").all():
         from pl_analytics.dashboard.advanced_players import render_advanced
+        from pl_analytics.dashboard.player_import import (
+            performance_importer,
+            performance_session_rows,
+        )
 
-        render_advanced(frame, all_seasons.loc[all_seasons.source.eq("FPL-Core-Insights")])
+        imported = performance_importer(
+            frame,
+            competition_id=str(frame.competition_id.iloc[0]),
+            season=str(frame.season.iloc[0]),
+            prefix="explorer-import",
+        )
+        current = pd.concat([frame, imported], ignore_index=True)
+        advanced = all_seasons.loc[all_seasons.source.eq("FPL-Core-Insights")]
+        advanced = pd.concat([advanced, performance_session_rows()], ignore_index=True)
+        render_advanced(current, advanced)
         return
     position = st.selectbox("Position", ["All", *sorted(frame.position_group.unique())])
     minimum = st.slider(
@@ -216,9 +229,22 @@ def _scouting(frame: pd.DataFrame, all_players: pd.DataFrame) -> None:
     frame = _season(frame)
     if "source" in frame and frame.source.eq("FPL-Core-Insights").all():
         from pl_analytics.dashboard.advanced_players import render_advanced
+        from pl_analytics.dashboard.player_import import (
+            performance_importer,
+            performance_session_rows,
+        )
 
+        imported = performance_importer(
+            frame,
+            competition_id=str(frame.competition_id.iloc[0]),
+            season=str(frame.season.iloc[0]),
+            prefix="scouting-import",
+        )
+        current = pd.concat([frame, imported], ignore_index=True)
+        advanced = all_players.loc[all_players.source.eq("FPL-Core-Insights")]
+        advanced = pd.concat([advanced, performance_session_rows()], ignore_index=True)
         render_advanced(
-            frame, all_players.loc[all_players.source.eq("FPL-Core-Insights")], scouting=True
+            current, advanced, scouting=True
         )
         return
     frame = frame.loc[frame.minutes.ge(450) & frame.ranking_eligible]
@@ -275,14 +301,26 @@ def _scouting(frame: pd.DataFrame, all_players: pd.DataFrame) -> None:
     )
 
 
-def _values(frame: pd.DataFrame) -> None:
+def _values(
+    frame: pd.DataFrame, settings, competition: str, default_season: str
+) -> None:
+    from pl_analytics.dashboard.player_import import value_importer
+
+    imported = value_importer(
+        settings=settings,
+        competition_id=competition,
+        default_season=default_season,
+        prefix="market-import",
+    )
+    frame = frame.assign(is_user_import=False)
+    frame = pd.concat([frame, imported], ignore_index=True)
     frame = _season(frame)
     st.warning(
         "Research benchmark: serious errors occur for low-exposure players. "
         "A model gap is not evidence of a bargain. Editorial market values are not transfer fees."
     )
     if not st.checkbox("Include low-exposure or missing-prior-value observations"):
-        excluded = frame.low_exposure | frame.missing_previous_value
+        excluded = (frame.low_exposure | frame.missing_previous_value) & ~frame.is_user_import
         st.caption(
             f"{int(excluded.sum())} fragile observations hidden; "
             "evaluation metrics remain unchanged."
@@ -491,7 +529,12 @@ def render(page: str = "Overview") -> None:
                 ]
                 render_teams(advanced)
             else:
-                _values(frame)
+                competition_players = all_players.loc[
+                    all_players.competition_id.eq(competition)
+                ]
+                seasons = sorted(competition_players.season.dropna().astype(str).unique())
+                default_season = seasons[-1] if seasons else str(frame.season.max())
+                _values(frame, settings, competition, default_season)
         elif page == "Match Predictor":
             _match(settings, competition)
         elif page == "FPL Decision Lab":

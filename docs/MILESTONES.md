@@ -466,3 +466,22 @@ expected minutes per fixture and state that full squad constraints belong to My 
 
 Suggested commit:
 `feat: add advanced standings and fpl transfer suggestions`
+
+---
+
+## M18 — Session player import and comparison
+
+Player Explorer and Scouting Finder accept validated manual or CSV profiles containing
+totals or per-90 counts and 0–100 percentage metrics. Records remain in Streamlit session
+memory, retain competition/season/position context and are scored against native peers
+without changing the league reference distribution. Missing values remain missing.
+
+Market Value accepts the eight allowlisted M5 inputs, observed editorial value and an
+optional date/season through a form or CSV. On explicit submission it checksum-verifies
+the trusted frozen model and displays the same prediction/interval semantics used by the
+historical experiment. It does not accept uploaded models, persist inputs or retrain.
+
+See [PLAYER_IMPORT.md](PLAYER_IMPORT.md).
+
+Suggested commit:
+`feat: add session player import comparisons`

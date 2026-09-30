@@ -158,6 +158,7 @@ def render_teams(frame: pd.DataFrame) -> None:
     peer_column = (
         f"{rank_metric}_peers" if context == "League" else f"{rank_metric}_cohort_peers"
     )
+    absolute_defensive_contribution = rank_metric == "defensive_contribution"
     table_rows = []
     for _, player in ranked.iterrows():
         row = {
@@ -165,23 +166,33 @@ def render_teams(frame: pd.DataFrame) -> None:
             "Position": player.position_group,
             "Minutes": player.minutes,
             "Appearances": player.appearances,
-            f"{context} rank · {METRICS[rank_metric].label}": top_percent_label(
-                player[percentile_column]
-            ),
-            "Eligible peers": player[peer_column],
         }
+        if absolute_defensive_contribution:
+            row["Defensive contributions (total)"] = player.defensive_contribution
+        else:
+            row[f"{context} rank · {METRICS[rank_metric].label}"] = top_percent_label(
+                player[percentile_column]
+            )
+            row["Eligible peers"] = player[peer_column]
         for name in metrics:
             label = METRICS[name].label
             if per90 and METRICS[name].kind == "count":
                 label += " / 90"
+            if name == "defensive_contribution" and not per90:
+                continue
             row[label] = _metric_value(player, name, per90)
         table_rows.append(row)
     st.subheader(f"{clubs[club_id]} squad statistics")
     st.dataframe(pd.DataFrame(table_rows), hide_index=True, width="stretch", height=520)
+    rank_note = (
+        "Defensive contributions are shown as observed action totals, not percentiles."
+        if absolute_defensive_contribution
+        else "League Top-% ranks compare the same competition, season and broad position. "
+        "Team ranks compare the filtered squad shown above."
+    )
     st.caption(
-        "Click any column header to sort ascending or descending. League Top-% ranks compare "
-        "the same competition, season and broad position. Team ranks compare the filtered "
-        "squad shown above; unavailable values remain blank."
+        f"Click any column header to sort ascending or descending. {rank_note} "
+        "Unavailable values remain blank."
     )
 
     choices = ranked.set_index("player_id").player_name.to_dict()

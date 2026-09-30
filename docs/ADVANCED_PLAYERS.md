@@ -110,6 +110,8 @@ by season, club, role and minutes, switch between totals and per 90, and choose 
 role-matched league percentile or a percentile within the filtered squad. Radar and
 scatter comparisons support up to five squad players. A player shortcut passes the
 selected season and stable player ID to Player Explorer.
+Defensive contributions are highlighted as observed action totals in the squad table,
+not as a percentile; Per-90 mode additionally exposes their rate.
 
 ![Three-defender radar comparison](screenshots/defender-comparison.png)
 ![Observed per-90 season performance](screenshots/advanced-statistics.png)

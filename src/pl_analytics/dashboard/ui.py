@@ -1,15 +1,18 @@
 """Read-only Streamlit views of offline analytics and frozen model artifacts."""
 
 import logging
+from html import escape
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from pydantic import ValidationError
 
 from pl_analytics.config import get_settings
+from pl_analytics.dashboard import components, theme
 from pl_analytics.dashboard.data import (
     ArtifactError,
     available_competitions,
@@ -24,15 +27,26 @@ from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.statistics.players import similar_players
 
 PAGES = {
-    "Overview": "Home.py",
+    "Matchday Hub": "Home.py",
+    "League Table": "pages/3_League_Table.py",
+    "Match Centre": "pages/8_Match_Centre.py",
+    "Match Predictor": "pages/4_Match_Predictor.py",
+    "Teams": "pages/3_Teams.py",
     "Player Explorer": "pages/1_Player_Explorer.py",
     "Scouting Finder": "pages/2_Scouting_Finder.py",
-    "Teams": "pages/3_Teams.py",
-    "League Table": "pages/3_League_Table.py",
     "FPL Decision Lab": "pages/4_FPL_Decision_Lab.py",
-    "Market Value": "pages/3_Market_Value.py",
-    "Match Predictor": "pages/4_Match_Predictor.py",
+    "Betting Lab": "pages/7_Betting_Lab.py",
     "Model Lab": "pages/5_Model_Lab.py",
+    "Market Value": "pages/3_Market_Value.py",
+    "Data Coverage": "pages/6_Data_Coverage.py",
+}
+
+SECTIONS = {
+    "Matchday": ["Matchday Hub", "Match Centre", "League Table", "Match Predictor"],
+    "Clubs & players": ["Teams", "Player Explorer", "Scouting Finder"],
+    "Fantasy": ["FPL Decision Lab"],
+    "Betting": ["Betting Lab"],
+    "Models & data": ["Model Lab", "Market Value", "Data Coverage"],
 }
 
 MODEL_PRESENTATION = {
@@ -72,6 +86,14 @@ MODEL_PRESENTATION = {
 }
 
 
+# name -> (label, display multiplier, number format)
+PRIMARY_METRICS = {
+    "log_loss": ("Log loss", 1.0, ",.3f"),
+    "mae_eur": ("Mean absolute error, € million", 1e-6, ",.2f"),
+    "mae": ("Mean absolute error", 1.0, ",.3f"),
+}
+
+
 def _season(frame: pd.DataFrame) -> pd.DataFrame:
     seasons = sorted(frame.season.unique(), reverse=True)
     requested = st.query_params.get("season")
@@ -88,37 +110,83 @@ def _player(frame: pd.DataFrame) -> pd.Series:
     return frame.loc[frame.player_id.eq(selected)].iloc[0]
 
 
+def _date(value: object, *, with_time: bool = False) -> str:
+    """Readable UTC dates instead of raw ISO timestamps."""
+    try:
+        stamp = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if pd.isna(stamp):
+        return "—"
+    return stamp.strftime("%d %b %Y, %H:%M UTC" if with_time else "%d %b %Y")
+
+
 def _missing() -> None:
     st.info("Analytics artifacts are not built yet for this view.")
     st.caption("Prepare the offline artifacts using the commands in docs/DASHBOARD.md.")
 
 
-def _overview(tables: dict) -> None:
-    st.subheader("Football, measured.")
-    st.write(
-        "Explore player performance, compare editorial valuations and estimate match outcomes."
-    )
+def _overview(tables: dict, settings) -> None:
     if all(frame.empty for frame in tables.values()):
         _missing()
         return
+    st.markdown(
+        '<div class="pl-eyebrow" style="margin-bottom:10px">Historical modules · selected '
+        "competition</div>",
+        unsafe_allow_html=True,
+    )
+    labels = {
+        "players": "Player profiles",
+        "values": "Valuation reviews",
+        "matches": "Evaluated matches",
+    }
     for column, (name, frame), identity in zip(
         st.columns(3), tables.items(), ("player_id", "player_id", "match_id"), strict=True
     ):
-        column.metric(
-            {
-                "players": "Player profiles",
-                "values": "Valuation reviews",
-                "matches": "Evaluated matches",
-            }[name],
-            frame[identity].nunique(),
+        seasons = sorted(frame.season.dropna().astype(str).unique())
+        span = f"{seasons[0]} – {seasons[-1]}" if len(seasons) > 1 else "".join(seasons)
+        column.markdown(
+            theme.stat_card(
+                labels[name],
+                f"{frame[identity].nunique():,}",
+                f"{len(seasons)} season{'s' if len(seasons) != 1 else ''}: {span}"
+                if seasons
+                else "Not built yet",
+            ),
+            unsafe_allow_html=True,
         )
-        column.caption("Seasons: " + ", ".join(sorted(frame.season.unique())))
+    fpl = report(settings.data_dir / "processed/fpl/metadata.json")
+    live = report(settings.artifact_dir / "dashboard/live_catalog.json")
+    current = []
+    if fpl:
+        current.append(
+            (
+                "FPL and league data",
+                f"Gameweek {fpl.get('current_gameweek', '—')}",
+                f"Season {fpl.get('season', '—')} · {fpl.get('players', '—')} players · "
+                f"source {str(fpl.get('source_commit', ''))[:8]}",
+            )
+        )
+    if live:
+        current.append(
+            (
+                "Live match models",
+                _date(live.get("last_result_date")),
+                f"Last result used · {live.get('training_matches', '—')} matches · "
+                f"refreshed {_date(live.get('refreshed_at'), with_time=True)}",
+            )
+        )
+    if current:
+        st.markdown(
+            '<div class="pl-eyebrow" style="margin:18px 0 10px">Current data · refreshed by '
+            "<code>refresh_current_data.py</code></div>",
+            unsafe_allow_html=True,
+        )
+        theme.stat_row(current)
+    st.write("")
     st.info(
         "These modules cover different historical periods. Dates shown in each view matter; "
         "a past player profile is not a current scouting assessment."
-    )
-    st.write(
-        "Use the sidebar to explore profiles, scouting, valuations, match predictions and models."
     )
     st.caption(
         "Observed statistics describe recorded matches. Predictions are uncertain estimates."
@@ -146,8 +214,9 @@ def _players(frame: pd.DataFrame, settings) -> None:
         advanced = pd.concat([advanced, performance_session_rows()], ignore_index=True)
         render_advanced(current, advanced)
         return
-    position = st.selectbox("Position", ["All", *sorted(frame.position_group.unique())])
-    minimum = st.slider(
+    first, second = st.columns(2)
+    position = first.selectbox("Position", ["All", *sorted(frame.position_group.unique())])
+    minimum = second.slider(
         "Minimum minutes", 0, max(1, int(frame.minutes.max())), min(450, int(frame.minutes.max()))
     )
     frame = frame.loc[frame.minutes.ge(minimum)]
@@ -157,8 +226,13 @@ def _players(frame: pd.DataFrame, settings) -> None:
         st.info("No players match these filters.")
         return
     player = _player(frame)
-    st.subheader(player.player_name)
-    st.caption(f"{player.position_group} · {player.season} · as of {player.reference_date}")
+    st.markdown(
+        f'<div class="pl-card-title" style="margin-top:6px">{escape(str(player.player_name))}'
+        f'</div><div class="pl-muted" style="margin:-8px 0 12px">'
+        f"{escape(str(player.position_group))} · {escape(str(player.season))} · as of "
+        f"{_date(player.reference_date)}</div>",
+        unsafe_allow_html=True,
+    )
     st.warning(
         "Positions come from a snapshot and are not historically verified. "
         "These metrics cover goals, assists and cards, not every aspect of performance."
@@ -182,7 +256,15 @@ def _players(frame: pd.DataFrame, settings) -> None:
         ]
     )
     st.plotly_chart(
-        px.bar(values, x="Metric", y="Per 90", color="Estimate", barmode="group"), width="stretch"
+        px.bar(
+            values,
+            x="Metric",
+            y="Per 90",
+            color="Estimate",
+            barmode="group",
+            color_discrete_sequence=[theme.ACCENT, theme.MUTED],
+        ),
+        width="stretch",
     )
     if player.ranking_eligible:
         peers = pd.DataFrame(
@@ -314,12 +396,15 @@ def _values(
     )
     frame = frame.assign(is_user_import=False)
     frame = pd.concat([frame, imported], ignore_index=True)
-    frame = _season(frame)
+    first, second = st.columns([1, 2], vertical_alignment="bottom")
+    with first:
+        frame = _season(frame)
+    include = second.checkbox("Include low-exposure or missing-prior-value observations")
     st.warning(
         "Research benchmark: serious errors occur for low-exposure players. "
         "A model gap is not evidence of a bargain. Editorial market values are not transfer fees."
     )
-    if not st.checkbox("Include low-exposure or missing-prior-value observations"):
+    if not include:
         excluded = (frame.low_exposure | frame.missing_previous_value) & ~frame.is_user_import
         st.caption(
             f"{int(excluded.sum())} fragile observations hidden; "
@@ -329,41 +414,88 @@ def _values(
     if frame.empty:
         st.info("No valuation observations match these filters.")
         return
-    player = _player(frame)
-    st.subheader(player.player_name)
-    st.caption(
-        f"Valuation date: {player.valuation_date} · prior-year minutes: {player.minutes_365:,.0f}"
-    )
-    for column, label, value in zip(
-        st.columns(3),
-        ("Observed editorial value", "Model estimate", "Model minus observed"),
-        (player.market_value_eur, player.predicted_value_eur, player.model_undervaluation_eur),
-        strict=True,
-    ):
-        column.metric(label, f"€{value / 1e6:,.2f}m")
-    st.write(
-        f"Nominal 90% prediction interval: **€{player.lower_eur / 1e6:,.2f}m – "
-        f"€{player.upper_eur / 1e6:,.2f}m**. Coverage is not guaranteed for each player."
-    )
-    st.caption(
-        "Latest recorded review per player in this period; dates differ. Not a current shortlist."
-    )
-    ranking = frame.sort_values("uncertainty_scaled_gap", ascending=False)[
-        [
-            "player_name",
-            "valuation_date",
-            "minutes_365",
-            "market_value_eur",
-            "predicted_value_eur",
-            "lower_eur",
-            "upper_eur",
-            "assessment",
+    review, everything = st.tabs(["Player review", "All reviews"])
+    with review:
+        player = _player(frame)
+        st.markdown(
+            f'<div class="pl-card-title" style="margin-top:6px">{escape(str(player.player_name))}'
+            f'</div><div class="pl-muted" style="margin:-8px 0 12px">Valuation date '
+            f"{_date(player.valuation_date)} · {player.minutes_365:,.0f} minutes in the prior "
+            "year</div>",
+            unsafe_allow_html=True,
+        )
+        for column, label, value in zip(
+            st.columns(3),
+            ("Observed editorial value", "Model estimate", "Model minus observed"),
+            (player.market_value_eur, player.predicted_value_eur, player.model_undervaluation_eur),
+            strict=True,
+        ):
+            column.metric(label, f"€{value / 1e6:,.2f}m")
+        scale = 1.05 * max(float(player.upper_eur), float(player.market_value_eur), 1.0)
+        observed = 100 * min(max(float(player.market_value_eur) / scale, 0.0), 1.0)
+        st.markdown(
+            '<div class="pl-card" style="margin-top:14px">'
+            f"Nominal 90% prediction interval: <b>€{player.lower_eur / 1e6:,.2f}m – "
+            f"€{player.upper_eur / 1e6:,.2f}m</b>. Coverage is not guaranteed for each player."
+            '<div style="position:relative;margin:16px 0 6px">'
+            + theme.range_bar(
+                float(player.lower_eur),
+                float(player.predicted_value_eur),
+                float(player.upper_eur),
+                scale,
+            )
+            + f'<span title="Observed value" style="position:absolute;top:-5px;'
+            f"left:calc({observed:.1f}% - 5px);width:10px;height:16px;border-radius:3px;"
+            f'background:{theme.WARNING}"></span></div>'
+            '<div class="pl-muted">Band: model interval · white marker: model estimate · '
+            f'<b style="color:{theme.WARNING}">■</b> observed editorial value. Scale runs from '
+            f"€0 to €{scale / 1e6:,.1f}m.</div></div>",
+            unsafe_allow_html=True,
+        )
+    with everything:
+        st.caption(
+            "Latest recorded review per player in this period; dates differ. "
+            "Not a current shortlist."
+        )
+        ranking = frame.sort_values("uncertainty_scaled_gap", ascending=False)[
+            [
+                "player_name",
+                "valuation_date",
+                "minutes_365",
+                "market_value_eur",
+                "predicted_value_eur",
+                "lower_eur",
+                "upper_eur",
+                "assessment",
+            ]
         ]
-    ]
-    st.dataframe(ranking, hide_index=True, width="stretch")
-    st.download_button(
-        "Download dated reviews", ranking.to_csv(index=False), "values.csv", "text/csv"
-    )
+        euros = st.column_config.NumberColumn(format="€%.0f")
+        st.dataframe(
+            ranking.rename(
+                columns={
+                    "player_name": "Player",
+                    "valuation_date": "Valuation date",
+                    "minutes_365": "Minutes (prior year)",
+                    "market_value_eur": "Observed",
+                    "predicted_value_eur": "Model",
+                    "lower_eur": "Low (90%)",
+                    "upper_eur": "High (90%)",
+                    "assessment": "Assessment",
+                }
+            ),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "Observed": euros,
+                "Model": euros,
+                "Low (90%)": euros,
+                "High (90%)": euros,
+                "Minutes (prior year)": st.column_config.NumberColumn(format="%.0f"),
+            },
+        )
+        st.download_button(
+            "Download dated reviews", ranking.to_csv(index=False), "values.csv", "text/csv"
+        )
 
 
 def _match(settings, competition: str) -> None:
@@ -375,59 +507,81 @@ def _match(settings, competition: str) -> None:
     names = model_clubs(settings, metadata)
     names = names.loc[names.competition_id.eq(competition)].set_index("club_id")["name"].to_dict()
     clubs = sorted(states.club_id.unique(), key=lambda club: names.get(club, club))
-    if metadata.get("mode") == "operational":
-        st.info(
-            f"Current snapshot: results through {metadata['last_result_date']}; "
-            f"model origin {metadata['origin']}. Refreshed {metadata['refreshed_at']}."
+    operational = metadata.get("mode") == "operational"
+    if operational:
+        through = _date(metadata["last_result_date"])
+        cards = (
+            ("Model data", "Live snapshot", f"Results through {through}"),
+            ("Refreshed", _date(metadata["refreshed_at"]), "Refit by the current-data refresh"),
+            ("Clubs covered", str(len(clubs)), f"{metadata.get('training_matches', '—')} matches"),
         )
     else:
+        cards = (
+            ("Model data", "Frozen evaluation", f"As of {_date(metadata['origin'])}"),
+            ("Clubs covered", str(len(clubs)), "At the evaluated origin"),
+        )
+    theme.stat_row(cards)
+    if not operational:
         st.info(
-            f"Frozen features and models as of {metadata['origin']}. "
+            f"Frozen features and models as of {_date(metadata['origin'])}. "
             "This is a hypothetical fixture at that origin, not a live forecast."
         )
-    home = st.selectbox("Home club", clubs, format_func=lambda club: names.get(club, club))
-    away = st.selectbox(
+    first, second, third = st.columns(3)
+    home = first.selectbox("Home club", clubs, format_func=lambda club: names.get(club, club))
+    away = second.selectbox(
         "Away club",
         [club for club in clubs if club != home],
         format_func=lambda club: names.get(club, club),
     )
     models = [*statistics["models"], "calibrated_ml"]
-    model = st.selectbox(
+    model = third.selectbox(
         "Model",
         models,
         index=models.index("dixon_coles_half365") if "dixon_coles_half365" in models else 0,
         format_func=lambda name: MODEL_PRESENTATION.get(name, (name, ""))[0],
     )
     st.caption(MODEL_PRESENTATION.get(model, (model, "No description available."))[1])
-    if st.button("Predict match", type="primary"):
-        result = scenario(home, away, competition, model, statistics, ml, states)
-        for column, label, probability in zip(
-            st.columns(3), ("Home win", "Draw", "Away win"), result["probabilities"], strict=True
-        ):
-            column.metric(label, f"{probability:.1%}")
-        st.caption("Probabilities express uncertainty; the most likely result can still fail.")
-        if result["matrix"] is not None:
-            matrix = result["matrix"]
-            st.write(
-                f"Expected goal counts: {result['rates'][0]:.2f} home, "
-                f"{result['rates'][1]:.2f} away (not event-based xG)."
-            )
-            st.plotly_chart(
-                px.imshow(
-                    matrix[:7, :7],
-                    origin="lower",
-                    text_auto=".1%",
-                    labels={"x": "Away goals", "y": "Home goals", "color": "Probability"},
+    # Inference from prepared bundles is instant, so the forecast follows the selectors.
+    result = scenario(home, away, competition, model, statistics, ml, states)
+    home_name, away_name = str(names.get(home, home)), str(names.get(away, away))
+    probabilities = [float(value) for value in result["probabilities"]]
+    matrix = result["matrix"]
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="pl-card-title">{escape(home_name)} v {escape(away_name)}</div>',
+            unsafe_allow_html=True,
+        )
+        left, right = st.columns([2, 3], gap="medium")
+        with left:
+            st.markdown(
+                components.outcome_cards(*probabilities)
+                + '<div style="margin-top:12px">'
+                + theme.probability_bar(*probabilities)
+                + "</div>"
+                + (
+                    '<div style="margin-top:10px">'
+                    + components.score_facts(matrix, result["rates"])
+                    + "</div>"
+                    if matrix is not None
+                    else ""
                 ),
-                width="stretch",
+                unsafe_allow_html=True,
             )
-            st.caption(
-                f"Displayed 0–6 grid contains {matrix[:7, :7].sum():.2%} of probability; "
-                f"the complete grid sums to {matrix.sum():.6f}."
-            )
-        else:
-            st.info("This model estimates outcomes only; it does not produce scorelines.")
+        with right:
+            if matrix is None:
+                st.info("This model estimates outcomes only; it does not produce scorelines.")
+            else:
+                st.plotly_chart(
+                    components.score_heatmap(matrix, home_name, away_name, goals=7),
+                    width="stretch",
+                    config={"displayModeBar": False},
+                )
+                st.caption(
+                    f"The 0–6 grid holds {matrix[:7, :7].sum():.2%} of the probability. "
+                    "Expected goals are model goal counts, not event-based xG."
+                )
     st.caption(
+        "Probabilities express uncertainty; the most likely result can still fail. "
         "The calibrated ML pilot has only 40 held-out matches and trails Dixon–Coles "
         "on log loss. Consult Model Lab before interpreting estimates."
     )
@@ -436,13 +590,25 @@ def _match(settings, competition: str) -> None:
 def _lab(settings, competition: str) -> None:
     experiment = st.selectbox(
         "Experiment",
-        ["m5", "m6", "m7"],
+        ["m5", "m6", "m7", "fpl", "market"],
         format_func=lambda item: {
             "m5": "Player value",
             "m6": "Statistical matches",
             "m7": "Calibrated match ML",
+            "fpl": "FPL expected points",
+            "market": "Match models vs bookmakers",
         }[item],
     )
+    if experiment == "market":
+        from pl_analytics.dashboard.betting import render_market_benchmark
+
+        render_market_benchmark(settings, competition)
+        return
+    if experiment == "fpl":
+        from pl_analytics.dashboard.fpl import render_backtest
+
+        render_backtest(settings)
+        return
     result = report(settings.artifact_dir / experiment / "evaluation.json")
     if not result:
         _missing()
@@ -452,8 +618,67 @@ def _lab(settings, competition: str) -> None:
     if scope is not None and scope != competition:
         st.info("This experiment does not cover the selected competition.")
         return
-    st.write("Frozen selected model: **" + result["chosen"] + "**")
-    st.dataframe(pd.DataFrame(result["metrics"]).T, width="stretch")
+    metrics = pd.DataFrame(result["metrics"]).T
+    chosen = str(result["chosen"])
+    primary = next(
+        (name for name in PRIMARY_METRICS if name in metrics),
+        next((name for name in metrics.columns if name != "n"), metrics.columns[0]),
+    )
+    primary_label, multiplier, number = PRIMARY_METRICS.get(primary, (primary, 1.0, ",.3f"))
+
+    def display(name: object) -> str:
+        return MODEL_PRESENTATION.get(str(name), (str(name).replace("_", " "), ""))[0]
+
+    cards = [("Frozen selected model", display(chosen), "Chosen before the final test")]
+    if chosen in metrics.index and pd.notna(metrics.loc[chosen, primary]):
+        cards.append(
+            (
+                primary_label,
+                f"{metrics.loc[chosen, primary] * multiplier:{number}}",
+                "Selected model, final test · lower is better",
+            )
+        )
+    sample = result.get("test_matches") or metrics.get("n", pd.Series(dtype=float)).max()
+    if pd.notna(sample):
+        cards.append(("Test sample", f"{int(sample):,}", "Observations in the final evaluation"))
+    cards.append(("Candidates compared", str(len(metrics)), "Including simple baselines"))
+    theme.stat_row(cards)
+
+    ordered = (metrics[primary].dropna() * multiplier).sort_values()
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="pl-card-title">{primary_label} by model</div>',
+            unsafe_allow_html=True,
+        )
+        # A failed candidate can be thousands of times worse; a log axis keeps the rest legible.
+        wide = len(ordered) > 1 and ordered.min() > 0 and ordered.max() / ordered.min() > 20
+        figure = go.Figure(
+            go.Bar(
+                x=ordered.to_numpy(),
+                y=[display(name) for name in ordered.index],
+                orientation="h",
+                marker_color=[
+                    theme.ACCENT if name == chosen else theme.DRAW for name in ordered.index
+                ],
+                text=[f"{value:{number}}" for value in ordered],
+                textposition="outside",
+                cliponaxis=False,
+            )
+        )
+        figure.update_layout(
+            height=max(220, 34 * len(ordered) + 70),
+            margin={"l": 10, "r": 70, "t": 10, "b": 40},
+            xaxis={
+                "title": primary_label + (" (log scale)" if wide else ""),
+                "type": "log" if wide else "linear",
+            },
+            yaxis={"autorange": "reversed", "ticksuffix": "  "},
+        )
+        st.plotly_chart(
+            figure, width="stretch", key=f"lab-{experiment}", config={"displayModeBar": False}
+        )
+        st.caption("The selected model is highlighted. Shorter bars are better.")
+    st.dataframe(metrics.rename(index=display), width="stretch")
     st.caption(
         "Lower MAE/RMSE, log loss, Brier and RPS are better. "
         "Log loss penalizes confident mistakes; Brier measures probability error; "
@@ -466,21 +691,14 @@ def _lab(settings, competition: str) -> None:
     card = {"m5": "player_value", "m6": "match_statistics", "m7": "match_ml"}[experiment]
     path = Path("reports/model_cards") / f"{card}.md"
     if path.exists():
-        with st.expander("Methodology, dates and limitations", expanded=True):
+        with st.expander("Methodology, dates and limitations"):
             st.markdown(path.read_text(encoding="utf-8"))
 
 
-def render(page: str = "Overview") -> None:
+def render(page: str = "Matchday Hub") -> None:
     """Render a standalone page safely; all expensive preparation is an explicit CLI task."""
     st.set_page_config(page_title=f"{page} · Analytics Lab", page_icon="⚽", layout="wide")
-    st.markdown(
-        "<style>.block-container{max-width:1440px;padding-top:4rem}"
-        "[data-testid=stMetric]{background:white;padding:1rem;border:1px solid #dce3eb;"
-        "border-radius:12px}[data-testid=stMetricLabel] p{white-space:normal}"
-        "[data-testid=stMetricValue]{font-size:1.6rem}"
-        "[data-testid=stMetricValue] div{white-space:normal;overflow-wrap:anywhere}</style>",
-        unsafe_allow_html=True,
-    )
+    theme.apply()
     try:
         settings = get_settings()
     except ValidationError:
@@ -488,23 +706,33 @@ def render(page: str = "Overview") -> None:
             "Configuration is invalid. Check .env and environment variables, then restart the app."
         )
         return
-    st.caption("Configured competition scope: " + ", ".join(settings.active_competitions))
     with st.sidebar:
-        st.title("⚽ Analytics Lab")
-        st.caption("Performance · Value · Probability")
+        st.markdown(
+            '<div class="pl-eyebrow" style="margin-bottom:2px">Analytics Lab</div>'
+            '<div class="pl-muted">Premier League · performance, probability, FPL</div>',
+            unsafe_allow_html=True,
+        )
     tables, errors = catalog(settings)
     for error in errors:
         st.warning(error)
     competitions = available_competitions(tables)
-    competition = st.sidebar.selectbox("Competition", competitions) if competitions else None
+    if len(competitions) > 1:
+        competition = st.sidebar.selectbox("Competition", competitions)
+    else:
+        competition = competitions[0] if competitions else None
     all_players = tables["players"]
     tables = {
         name: frame.loc[frame.competition_id.eq(competition)] for name, frame in tables.items()
     }
-    st.title(page)
+    if page != "Matchday Hub":
+        theme.page_header(page)
     try:
-        if page == "Overview":
-            _overview(tables)
+        if page == "Matchday Hub":
+            from pl_analytics.dashboard.hub import render_hub
+
+            render_hub(settings, competition or settings.active_competitions[0])
+        elif page == "Data Coverage":
+            _overview(tables, settings)
         elif competition is None:
             _missing()
         elif page == "League Table":
@@ -541,6 +769,14 @@ def render(page: str = "Overview") -> None:
             from pl_analytics.dashboard.fpl import render_fpl
 
             render_fpl(settings, competition)
+        elif page == "Match Centre":
+            from pl_analytics.dashboard.match_centre import render_match_centre
+
+            render_match_centre(settings, competition)
+        elif page == "Betting Lab":
+            from pl_analytics.dashboard.betting import render_betting
+
+            render_betting(settings, competition)
         elif page == "Model Lab":
             _lab(settings, competition)
     except ArtifactError as error:

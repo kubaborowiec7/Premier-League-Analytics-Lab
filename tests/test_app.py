@@ -20,7 +20,7 @@ def test_landing_page_without_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert not app.exception
     assert not app.error
     assert "artifacts are not built yet" in app.info[0].value
-    assert "EPL, LALIGA" in app.caption[0].value
+    assert not any("Configured competition scope" in item.value for item in app.caption)
 
 
 def test_landing_page_handles_invalid_settings(monkeypatch: pytest.MonkeyPatch) -> None:

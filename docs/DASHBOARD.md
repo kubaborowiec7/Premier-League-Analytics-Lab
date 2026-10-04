@@ -76,12 +76,64 @@ view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED
 
 Run `python scripts/refresh_current_data.py` for an immediate update. The supplied
 GitHub Actions workflow and Windows Task Scheduler installer automate this outside
-the web process. Streamlit remains read-only and never downloads or fits on a button
-click. The sole interactive data request is the explicit public-team lookup in FPL
-Decision Lab; it remains in session memory and sends no credentials. See
+the web process. Streamlit never fits models or downloads datasets on a button click.
+The interactive data requests are the explicit public-team and mini-league lookups in
+FPL Decision Lab; they remain in session memory and send no credentials. The only file
+the app writes is the user's own bet log, `data/user/bets.csv` (see
+[BETTING_LAB.md](BETTING_LAB.md)). See
 [CURRENT_REFRESH.md](CURRENT_REFRESH.md).
-FPL Decision Lab uses separately prepared current-season projections. Its six tabs
-cover player picks, fixtures, transfers, captaincy, an optional public squad and the
-rolling backtest. My Team displays the recommended legal XI on an interactive pitch
-and runs the constrained transfer/chip optimizer only when requested. See
-[FPL_LAB.md](FPL_LAB.md) for the projection formula and limits.
+FPL Decision Lab uses separately prepared current-season projections. One planning
+horizon in its header drives four tabs: This gameweek, Players, Fixtures and My team &
+transfers. My team shows the recommended legal XI on a pitch, a transfer planner and the
+constrained transfer/chip optimizer, which runs only when requested. The rolling
+backtest is the fourth Model Lab experiment. See [FPL_LAB.md](FPL_LAB.md) for the
+projection formula and limits.
+
+## Matchday Hub and visual system
+
+The default page is the Matchday Hub. It shows the next gameweek's fixtures with
+home/draw/away probabilities from the live goal model (Dixon–Coles, recent weighting),
+a match preview with a 0–5 scoreline grid, the table with xGD and last-five form, the
+latest results with xG, next-gameweek FPL projections and an availability watch.
+It reads `data/processed/fpl/{standings,fixtures,results,players}.parquet` and the
+live match snapshot; `results.parquet` is written by `refresh_current_data.py`.
+FPL club names are matched to model club names by `data.fpl.normalise_club`.
+
+Navigation is grouped (Matchday, Clubs & players, Fantasy, Models & data). The former
+Overview counts live on the Data Coverage page. All pages share one dark theme:
+`.streamlit/config.toml` sets Streamlit colours and `pl_analytics.dashboard.theme`
+holds the palette, the default Plotly template and small HTML components (club chips,
+form pills, probability bars, stat cards). Clubs are shown as colour-coded
+three-letter chips; no crests or league marks are used.
+
+Every page follows the same layout: a row of stat cards for context, one compact filter
+row, then tabs or cards for the content.
+
+- **League Table** – summary cards, the full table with xG columns and form, a "Season
+  outlook" tab and a "Points vs expected" tab with diverging bars. The outlook comes from
+  `statistics.season.simulate_season`: 10,000 seasons of the remaining fixtures drawn from
+  the live goal model's score matrices, written to `season_simulation.parquet` by the
+  refresh. It shows projected points with a 90% range, title, top-four and relegation
+  probabilities and a finishing-position heatmap. Goal rates are held fixed for the whole
+  season, so the probabilities are overconfident, and the simulator has no backtest yet.
+- **Match Centre** – one upcoming fixture from the next five gameweeks: the live model's
+  forecast, each club's position, record, xG per match, season outlook and last five
+  results, expected goals by match, and each side's likeliest scorers and availability
+  flags. A fixture the model cannot price still shows everything but the forecast.
+- **Match Predictor** – the forecast follows the club and model selectors (inference only,
+  no button): outcome tiles, probability bar, derived markets and the 0–6 score grid.
+  `dashboard.components` holds these pieces.
+- **Teams** – filters, squad summary cards, then "Squad statistics" and "Compare players"
+  (radar and scatter side by side).
+- **Player Explorer / Scouting Finder** – filters and a player header, then Profile, Peers
+  and Season statistics tabs; Scouting Finder adds Similar players first. The page opens on
+  the role's most-used player, and the peer minutes threshold starts at half the most-played
+  total until a season reaches 900 minutes.
+- **Market Value** – "Player review" (values and an interval bar) and "All reviews".
+- **Model Lab** – headline cards and a bar chart of the experiment's primary metric above
+  the full metric table; model cards open on demand.
+- **Data Coverage** – historical module counts and the freshness of current data.
+- **Betting Lab** – fair odds from the live goal model, a price checker for typed-in
+  bookmaker odds and stake-tax/staking calculators, under a standing note that bookmakers
+  have been more accurate than the model. The benchmark is the fifth Model Lab experiment.
+  See [BETTING_LAB.md](BETTING_LAB.md).

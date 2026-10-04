@@ -244,7 +244,7 @@ def test_advanced_ui_overlay_role_filters_and_scouting(observations, tmp_path, m
         assert not app.error and not app.exception
     app.switch_page("pages/2_Scouting_Finder.py").run(timeout=30)
     assert not app.error and not app.exception
-    assert any("Closest profiles" in heading.value for heading in app.subheader)
+    assert any("Closest profiles" in item.value for item in app.markdown)
     next(item for item in app.number_input if item.label == "Peer minimum minutes").set_value(
         1000
     ).run(timeout=30)

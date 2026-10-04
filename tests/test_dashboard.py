@@ -12,8 +12,18 @@ from streamlit.testing.v1 import AppTest
 from pl_analytics.config import Settings
 from pl_analytics.dashboard.data import ArtifactError, catalog, report, scenario, table
 from pl_analytics.dashboard.formatting import top_percent_label
+from pl_analytics.dashboard.match_centre import club_matches
+from pl_analytics.features.fpl import (
+    fixture_rows,
+    latest_players,
+    league_table,
+    match_results,
+    project_players,
+)
+from pl_analytics.features.fpl_optimizer import backtest_summary, rolling_backtest
 from pl_analytics.features.players import aggregate_players, fit_peers
 from pl_analytics.models.match_statistical import GoalModel
+from pl_analytics.statistics.season import simulate_season
 
 APP = Path(__file__).resolve().parents[1] / "app/Home.py"
 PAGES = [
@@ -25,6 +35,9 @@ PAGES = [
     "3_Market_Value",
     "4_Match_Predictor",
     "5_Model_Lab",
+    "6_Data_Coverage",
+    "7_Betting_Lab",
+    "8_Match_Centre",
 ]
 
 
@@ -58,13 +71,13 @@ def test_every_page_without_artifacts(isolated, page):
     assert "artifacts are not built yet" in app.info[0].value
 
 
-def test_real_player_navigation_with_synthetic_competition(isolated):
+def _write_player_features(settings: Settings, competition: str) -> None:
     appearances = pd.DataFrame(
         [
             dict(
                 player_id=f"p{p}",
                 player_name=f"Player {p}",
-                competition_id="SECOND",
+                competition_id=competition,
                 season="2023/24",
                 match_id=f"m{m}",
                 club_id="club",
@@ -83,11 +96,16 @@ def test_real_player_navigation_with_synthetic_competition(isolated):
     )
     raw = aggregate_players(appearances, "2024-02-01")
     players = fit_peers(raw, min_minutes=450, min_peers=3).transform(raw)
-    destination = isolated.data_dir / "processed/m4/player_features.parquet"
+    destination = settings.data_dir / "processed/m4/player_features.parquet"
     destination.parent.mkdir(parents=True)
     players.to_parquet(destination)
+
+
+def test_real_player_navigation_with_synthetic_competition(isolated):
+    _write_player_features(isolated, "SECOND")
     app = AppTest.from_file(str(APP)).run(timeout=20)
-    assert app.sidebar.selectbox[0].options == ["SECOND"]
+    # A single available competition is applied without a redundant selector.
+    assert not app.sidebar.selectbox
     app.switch_page("pages/1_Player_Explorer.py").run()
     assert not app.exception and not app.error
     assert len(app.metric) == 4
@@ -96,6 +114,160 @@ def test_real_player_navigation_with_synthetic_competition(isolated):
     assert len(app.dataframe[0].value) == 5
     app.multiselect[1].set_value([]).run()
     assert "Select at least one" in app.info[0].value
+
+
+def _write_fpl_artifacts(root: Path) -> None:
+    """Build a tiny two-club FPL artifact set through the production feature functions."""
+    positions = ["Goalkeeper", "Defender", "Midfielder", "Forward"]
+    identities = pd.DataFrame(
+        [
+            dict(
+                player_id=index,
+                player_code=100 + index,
+                first_name="Test",
+                second_name=f"Player{index}",
+                position=positions[index % 4],
+                team_code=1 + index % 2,
+            )
+            for index in range(1, 17)
+        ]
+    )
+    stats = pd.DataFrame(
+        [
+            {
+                "id": index,
+                "gw": gw,
+                "now_cost": 45 + index,
+                "total_points": 3 * gw + index,
+                "event_points": 2 + index % 3,
+                "points_per_game": 3.0,
+                "form": 3.0,
+                "selected_by_percent": 5.0 + index,
+                "ep_next": 3.0,
+                "minutes": 90 * gw,
+                "starts": gw,
+                "expected_goals_per_90": 0.05 * index,
+                "expected_assists_per_90": 0.1,
+                "defensive_contribution_per_90": 6.0,
+                "saves_per_90": 3.0,
+                "status": "d" if index == 3 else "a",
+                "chance_of_playing_next_round": 50 if index == 3 else None,
+                "news": "Knock" if index == 3 else "",
+                "web_name": f"Player{index}",
+            }
+            for index in range(1, 17)
+            for gw in (1, 2)
+        ]
+    )
+    teams = pd.DataFrame(
+        [
+            dict(code=1, name="Alpha", short_name="ALP", elo=None),
+            dict(code=2, name="Beta", short_name="BET", elo=None),
+        ]
+    )
+    matches = pd.DataFrame(
+        [
+            dict(
+                match_id=f"m{gameweek}",
+                gameweek=gameweek,
+                kickoff_time=f"2026-09-{gameweek:02d}T14:00:00Z",
+                home_team=1 + gameweek % 2,
+                away_team=2 - gameweek % 2,
+                home_score=2,
+                away_score=1,
+                home_expected_goals_xg=1.8,
+                away_expected_goals_xg=0.9,
+                finished=gameweek <= 2,
+            )
+            for gameweek in range(1, 8)
+        ]
+    )
+    kwargs = dict(
+        competition_id="TEST",
+        season="2026/27",
+        position_map={
+            "Goalkeeper": "GK",
+            "Defender": "DEF",
+            "Midfielder": "MID",
+            "Forward": "FWD",
+        },
+    )
+    players, history = latest_players(stats, identities, teams, **kwargs)
+    fixtures = fixture_rows(matches, teams)
+    backtest = rolling_backtest(stats, identities, teams, matches, **kwargs)
+    root.mkdir(parents=True)
+    project_players(players, history, fixtures).to_parquet(root / "players.parquet")
+    fixtures.to_parquet(root / "fixtures.parquet")
+    standings = league_table(matches, teams, competition_id="TEST", season="2026/27")
+    standings.to_parquet(root / "standings.parquet")
+    match_results(matches, teams).to_parquet(root / "results.parquet")
+    home = fixtures.loc[fixtures.venue.eq("H")]
+    simulate_season(
+        standings[["club_id", "points", "goals_for", "goals_against"]],
+        pd.DataFrame(
+            {
+                "home_club_id": home.club_id,
+                "away_club_id": home.opponent_id,
+                "home_rate": home.expected_goals_for,
+                "away_rate": home.expected_goals_against,
+            }
+        ),
+        simulations=200,
+        top_places=1,
+        relegation_places=1,
+    ).merge(
+        standings[["club_id", "club_name", "club_short_name", "competition_id", "season"]],
+        on="club_id",
+    ).to_parquet(root / "season_simulation.parquet")
+    backtest.to_parquet(root / "backtest.parquet")
+    (root / "backtest.json").write_text(json.dumps(backtest_summary(backtest)))
+    (root / "metadata.json").write_text(
+        json.dumps(
+            {
+                "season": "2026/27",
+                "current_gameweek": 2,
+                "next_gameweek": 3,
+                "source_commit": "0123456789abcdef",
+                "manager": None,
+            }
+        )
+    )
+
+
+def test_fpl_lab_and_backtest_render_from_synthetic_artifacts(isolated):
+    _write_player_features(isolated, "TEST")
+    _write_fpl_artifacts(isolated.data_dir / "processed/fpl")
+    app = AppTest.from_file(str(APP)).run(timeout=20)
+    app.switch_page("pages/4_FPL_Decision_Lab.py").run(timeout=20)
+    assert not app.exception and not app.error
+    assert [tab.label for tab in app.tabs] == [
+        "This gameweek",
+        "Players",
+        "Fixtures",
+        "My team & transfers",
+        "Mini-league",
+    ]
+    rendered = " ".join(item.value for item in app.markdown)
+    assert "Captain picks" in rendered and "Fixture ticker" in rendered
+    assert "Transfer planner" in rendered and "Knock" in rendered
+    app.switch_page("pages/3_League_Table.py").run(timeout=20)
+    assert not app.exception and not app.error
+    assert [tab.label for tab in app.tabs] == ["Table", "Season outlook", "Points vs expected"]
+    rendered = " ".join(item.value for item in app.markdown)
+    assert "200 simulated seasons" in rendered and "Where each club finishes" in rendered
+    app.switch_page("pages/8_Match_Centre.py").run(timeout=20)
+    assert not app.exception and not app.error
+    rendered = " ".join(item.value for item in app.markdown)
+    # No match model is prepared here, so the page explains that and still shows the rest.
+    assert any("no forecast for this fixture" in item.value for item in app.info)
+    assert all(text in rendered for text in ("Last matches", "chance to score", "Projected points"))
+    history = club_matches(table(isolated.data_dir / "processed/fpl/results.parquet"), "ALP")
+    assert history.gameweek.tolist() == [1, 2] and set(history.venue) == {"H", "A"}
+    assert history.result.isin(["W", "D", "L"]).all()
+    app.switch_page("pages/5_Model_Lab.py").run(timeout=20)
+    app.selectbox[0].set_value("fpl").run(timeout=20)
+    assert not app.exception and not app.error
+    assert any("Event model MAE" in item.value for item in app.markdown)
 
 
 def test_corrupt_artifact_does_not_hide_independent_modules(isolated):

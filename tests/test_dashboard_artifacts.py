@@ -222,7 +222,8 @@ def test_match_button_uses_prepared_base_rate(artifacts):
     ).to_parquet(root / "dashboard/clubs.parquet")
     app = AppTest.from_file(str(APP)).run(timeout=20)
     app.switch_page("pages/4_Match_Predictor.py").run()
-    app.button[0].click().run()
+    next(item for item in app.selectbox if item.label == "Model").select("base_rate").run()
     assert not app.error and not app.exception
-    assert [metric.value for metric in app.metric] == ["40.0%", "30.0%", "30.0%"]
+    rendered = " ".join(item.value for item in app.markdown)
+    assert all(text in rendered for text in ("Alpha v Beta", "40.0%", "30.0%"))
     assert any("does not produce scorelines" in item.value for item in app.info)

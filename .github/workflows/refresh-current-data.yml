@@ -16,6 +16,12 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Optional. A public FPL team ID (repository variable) adds the squad to the build.
+      FPL_ENTRY_ID: ${{ vars.FPL_ENTRY_ID }}
+      # Optional. A private repository URL with a write token (repository secret) turns on
+      # publishing for the hosted app; see docs/HOSTING.md.
+      DEPLOY_REMOTE: ${{ secrets.DEPLOY_REMOTE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,6 +39,9 @@ jobs:
         run: |
           ruff check .
           pytest tests/test_current_refresh.py tests/test_dashboard_artifacts.py
+      - name: Publish refreshed data to the private app repository
+        if: ${{ env.DEPLOY_REMOTE != '' }}
+        run: python scripts/publish_private_app.py
       - name: Upload portable refresh bundle
         uses: actions/upload-artifact@v4
         with:

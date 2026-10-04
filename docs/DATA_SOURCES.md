@@ -36,6 +36,12 @@ Implementation:
 Do not treat bookmaker odds as model features in the primary football model.
 They can be used later as a benchmark for predictive information/calibration.
 
+The benchmark now exists: `pl_analytics.data.market_odds` reads the opening and closing
+match-result and over/under 2.5 odds (market average, best price, Pinnacle, Bet365) from
+the same archived files, without a new download. They are used only to score the match
+models against the market and as a price reference in the Betting Lab; see
+[BETTING_LAB.md](BETTING_LAB.md).
+
 ---
 
 M6 extends the existing Football-Data path to seven pinned `E0` seasons from 2019/20

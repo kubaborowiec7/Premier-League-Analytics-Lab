@@ -36,3 +36,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Personal records written by the dashboard (bet log)
+data/user/*

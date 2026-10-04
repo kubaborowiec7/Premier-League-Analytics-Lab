@@ -8,8 +8,169 @@ import httpx
 import pandas as pd
 
 from pl_analytics.data.snapshots import Snapshot, SnapshotStore
-from pl_analytics.features.fpl import fixture_rows, latest_players, league_table, project_players
+from pl_analytics.features.fpl import (
+    fixture_rows,
+    latest_players,
+    league_table,
+    match_results,
+    price_watch_backtest,
+    prior_season_rates,
+    project_players,
+)
 from pl_analytics.features.fpl_optimizer import backtest_summary, rolling_backtest
+from pl_analytics.statistics.season import simulate_season
+
+MAX_LEAGUE_TEAMS = 21
+
+_ALIASES = {
+    "spurs": "tottenham",
+    "wolverhampton wanderers": "wolves",
+    "nottingham forest": "nott'm forest",
+}
+
+
+def normalise_club(name: object) -> str:
+    """Match FPL club names to Football-Data names (e.g. "Man Utd" → "Man United")."""
+    value = str(name).lower().replace("&", "and").strip()
+    value = re.sub(r"\butd\b", "united", value)
+    value = _ALIASES.get(value, value)
+    value = re.sub(r"^afc\s+|\s+(city|town|fc|afc)$", "", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def model_goal_rates(
+    matches: pd.DataFrame,
+    teams: pd.DataFrame,
+    model: object,
+    clubs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Score FPL fixtures with a fitted goal model, matching clubs by normalised name.
+
+    ``model`` needs ``rates(home, away)`` and ``teams``; ``clubs`` maps its ``club_id``
+    to ``name``. Fixtures with a club the model has not seen are left out so the
+    caller's season-xG fallback applies instead of a neutral guess.
+    """
+    known = set(getattr(model, "teams", ()))
+    lookup = {
+        normalise_club(name): club
+        for club, name in clubs[["club_id", "name"]].itertuples(index=False)
+        if club in known
+    }
+    names = teams.set_index("code")["name"].to_dict()
+    rows = []
+    for match in matches.itertuples(index=False):
+        home = lookup.get(normalise_club(names.get(match.home_team, "")))
+        away = lookup.get(normalise_club(names.get(match.away_team, "")))
+        if home is None or away is None:
+            continue
+        home_rate, away_rate = model.rates(home, away)
+        rows.append(
+            {"match_id": str(match.match_id), "home_rate": home_rate, "away_rate": away_rate}
+        )
+    return pd.DataFrame(rows, columns=["match_id", "home_rate", "away_rate"])
+
+
+def _prior_frames(config: dict, raw_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame] | None:
+    """Player stats and identities of the latest earlier season with cumulative stats."""
+    for season in reversed(config["seasons"][:-1]):
+        files = season["files"]
+        if {"playerstats", "players"} <= {entry["kind"] for entry in files}:
+            return (
+                _read_frame(raw_dir, _one(files, "playerstats"), source_kind="playerstats"),
+                _read_frame(raw_dir, _one(files, "players"), source_kind="players"),
+            )
+    return None
+
+
+def _prior_rates(config: dict, raw_dir: Path) -> pd.DataFrame | None:
+    """Final rates of the most recent earlier season that publishes cumulative stats."""
+    frames = _prior_frames(config, raw_dir)
+    return None if frames is None else prior_season_rates(*frames)
+
+
+def manager_summary(entry_id: int, entry: dict, event: int) -> dict:
+    """The public team facts the dashboard keeps: no manager name, private leagues only."""
+    classic = (entry.get("leagues") or {}).get("classic") or []
+    return {
+        "entry_id": entry_id,
+        "team_name": entry.get("name"),
+        "event": event,
+        "bank": entry.get("last_deadline_bank"),
+        "team_value": entry.get("last_deadline_value"),
+        "overall_points": entry.get("summary_overall_points"),
+        "overall_rank": entry.get("summary_overall_rank"),
+        "leagues": [
+            {
+                "id": int(league["id"]),
+                "name": str(league.get("name", "")),
+                "entry_rank": league.get("entry_rank"),
+                "rank_count": league.get("rank_count"),
+            }
+            for league in classic
+            if league.get("league_type") == "x" and league.get("id") is not None
+        ],
+    }
+
+
+def _get_json(client: httpx.Client, url: str) -> dict:
+    try:
+        response = client.get(url)
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        raise ValueError("The public FPL data could not be loaded") from error
+    if not isinstance(payload, dict):
+        raise ValueError("The public FPL response has an invalid format")
+    return payload
+
+
+def fetch_league_standings(
+    *, league_id: int, page: int = 1, client: httpx.Client | None = None
+) -> tuple[str, pd.DataFrame]:
+    """One page (up to 50 teams) of a classic league table, without manager names."""
+    if league_id < 1 or page < 1:
+        raise ValueError("League and page identifiers must be positive")
+    if client is None:
+        with httpx.Client(timeout=15, follow_redirects=True) as owned:
+            return fetch_league_standings(league_id=league_id, page=page, client=owned)
+    payload = _get_json(
+        client,
+        f"https://fantasy.premierleague.com/api/leagues-classic/{league_id}/standings/"
+        f"?page_standings={page}",
+    )
+    rows = (payload.get("standings") or {}).get("results") or []
+    standings = pd.DataFrame(rows)
+    required = {"entry", "entry_name", "rank", "total"}
+    if standings.empty or not required <= set(standings):
+        raise ValueError("The league table is empty or unavailable")
+    columns = [*required, *({"event_total"} & set(standings))]
+    return str((payload.get("league") or {}).get("name", "")), standings[sorted(columns)]
+
+
+def fetch_league_picks(
+    *, entries: list[int], event: int, client: httpx.Client | None = None
+) -> pd.DataFrame:
+    """Gameweek picks for each listed team; a team that cannot be read is skipped."""
+    if event < 1 or not entries or len(entries) > MAX_LEAGUE_TEAMS:
+        raise ValueError(f"Between 1 and {MAX_LEAGUE_TEAMS} teams and a valid gameweek required")
+    if client is None:
+        with httpx.Client(timeout=15, follow_redirects=True) as owned:
+            return fetch_league_picks(entries=entries, event=event, client=owned)
+    frames = []
+    for entry in entries:
+        try:
+            payload = _get_json(
+                client,
+                f"https://fantasy.premierleague.com/api/entry/{int(entry)}/event/{event}/picks/",
+            )
+        except ValueError:
+            continue
+        picks = pd.DataFrame(payload.get("picks", []))
+        if {"element", "multiplier", "is_captain"} <= set(picks) and len(picks) == 15:
+            frames.append(picks[["element", "multiplier", "is_captain"]].assign(entry=int(entry)))
+    if not frames:
+        raise ValueError("No squad in this league could be loaded")
+    return pd.concat(frames, ignore_index=True)
 
 
 def _read_frame(raw_dir: Path, entry: dict, *, source_kind: str) -> pd.DataFrame:
@@ -124,8 +285,14 @@ def build_fpl_artifacts(
     destination: Path,
     *,
     entry_id: int | None = None,
+    goal_model: object | None = None,
+    model_clubs: pd.DataFrame | None = None,
 ) -> dict:
-    """Build read-only FPL planning tables from one resolved current source commit."""
+    """Build read-only FPL planning tables from one resolved current source commit.
+
+    ``goal_model`` and ``model_clubs`` (the live match model and its club names) make
+    fixture difficulty opponent-aware; without them season xG strengths are used.
+    """
     season = config["seasons"][-1]
     files = season["files"]
     players_source = _read_frame(raw_dir, _one(files, "players"), source_kind="players")
@@ -160,26 +327,61 @@ def build_fpl_artifacts(
         season=season["season"],
         position_map=config["position_map"],
     )
-    fixtures = fixture_rows(matches, teams_source)
+    goal_rates = (
+        model_goal_rates(matches, teams_source, goal_model, model_clubs)
+        if goal_model is not None and model_clubs is not None
+        else None
+    )
+    fixtures = fixture_rows(matches, teams_source, goal_rates)
+    prior_frames = _prior_frames(config, raw_dir)
+    priors = None if prior_frames is None else prior_season_rates(*prior_frames)
+    # The earlier, complete season gives the price watch far more gameweeks to score.
+    price_history = playerstats if prior_frames is None else prior_frames[0]
     standings = league_table(
         matches,
         teams_source,
         competition_id=config["competition_id"],
         season=season["season"],
     )
-    projections = project_players(players, history, fixtures, appearances=appearances)
+    results = match_results(matches, teams_source)
+    home_rows = fixtures.loc[fixtures.venue.eq("H")]
+    simulation = simulate_season(
+        standings[["club_id", "points", "goals_for", "goals_against"]],
+        pd.DataFrame(
+            {
+                "home_club_id": home_rows.club_id,
+                "away_club_id": home_rows.opponent_id,
+                "home_rate": home_rows.expected_goals_for,
+                "away_rate": home_rows.expected_goals_against,
+            }
+        ),
+        rho=float(getattr(goal_model, "rho", 0.0)),
+    ).merge(
+        standings[["club_id", "club_name", "club_short_name", "competition_id", "season"]],
+        on="club_id",
+        validate="one_to_one",
+    )
+    projections = project_players(
+        players, history, fixtures, appearances=appearances, priors=priors
+    )
     backtest = rolling_backtest(
         playerstats,
         players_source,
+        teams_source,
+        matches,
+        appearances,
         position_map=config["position_map"],
         competition_id=config["competition_id"],
         season=season["season"],
+        priors=priors,
     )
     backtest_report = backtest_summary(backtest)
     destination.mkdir(parents=True, exist_ok=True)
     projections.to_parquet(destination / "players.parquet", index=False)
     fixtures.to_parquet(destination / "fixtures.parquet", index=False)
     standings.to_parquet(destination / "standings.parquet", index=False)
+    results.to_parquet(destination / "results.parquet", index=False)
+    simulation.to_parquet(destination / "season_simulation.parquet", index=False)
     backtest.to_parquet(destination / "backtest.parquet", index=False)
     (destination / "backtest.json").write_text(
         json.dumps(backtest_report, indent=2) + "\n", encoding="utf-8"
@@ -194,15 +396,7 @@ def build_fpl_artifacts(
         )
         squad = map_public_squad(picks, projections)
         squad.to_parquet(squad_path, index=False)
-        manager = {
-            "entry_id": entry_id,
-            "team_name": entry.get("name"),
-            "event": event,
-            "bank": entry.get("last_deadline_bank"),
-            "team_value": entry.get("last_deadline_value"),
-            "overall_points": entry.get("summary_overall_points"),
-            "overall_rank": entry.get("summary_overall_rank"),
-        }
+        manager = manager_summary(entry_id, entry, event)
     elif squad_path.exists():
         squad_path.unlink()
     metadata = {
@@ -216,8 +410,11 @@ def build_fpl_artifacts(
         "future_fixtures": fixtures.match_id.nunique(),
         "manager": manager,
         "manager_sources": manager_sources,
-        "method": "recency-events-elo-v2",
+        "method": "recency-events-goalmodel-v3",
+        "fixture_rate_sources": fixtures.rate_source.value_counts().to_dict(),
+        "prior_season_players": 0 if priors is None else int(len(priors)),
         "backtest": backtest_report,
+        "price_watch": price_watch_backtest(price_history),
     }
     (destination / "metadata.json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"

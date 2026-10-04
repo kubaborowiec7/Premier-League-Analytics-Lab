@@ -8,9 +8,15 @@ import pandas as pd
 from scipy.optimize import Bounds, LinearConstraint, milp
 from scipy.sparse import lil_matrix
 
-from pl_analytics.features.fpl import expected_minutes_features
+from pl_analytics.features.fpl import (
+    fixture_rows,
+    latest_players,
+    project_players,
+    scorer_markets,
+)
 
 SQUAD_POSITIONS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
+SCORER_BINS = (0.0, 0.05, 0.10, 0.20, 0.30, 0.45, 1.0)
 STARTER_LIMITS = {"GK": (1, 1), "DEF": (3, 5), "MID": (2, 5), "FWD": (1, 3)}
 
 
@@ -49,6 +55,220 @@ def select_starting_xi(squad: pd.DataFrame, projection: str) -> pd.DataFrame:
     captain_id = int(starters.nlargest(1, projection).source_player_id.iloc[0])
     result["is_recommended_captain"] = result.source_player_id.eq(captain_id)
     return result
+
+
+def replacement_options(
+    players: pd.DataFrame,
+    outgoing: pd.Series,
+    *,
+    projection: str,
+    bank: float = 0.0,
+    squad: pd.DataFrame | None = None,
+    limit: int = 10,
+    min_minutes: float = 30.0,
+) -> pd.DataFrame:
+    """Rank same-position replacements affordable from the sale price plus the bank.
+
+    With ``squad`` the options exclude current squad members and respect the
+    three-per-club limit after the sale. Prices are current prices, not selling prices.
+    """
+    pool = players.loc[
+        players.position_group.eq(outgoing.position_group)
+        & players.price.le(float(outgoing.price) + float(bank) + 1e-9)
+        & players.source_player_id.ne(outgoing.source_player_id)
+    ]
+    if "expected_minutes" in pool:
+        pool = pool.loc[pool.expected_minutes.ge(min_minutes)]
+    if squad is not None:
+        remaining = squad.loc[squad.source_player_id.ne(outgoing.source_player_id)]
+        club_counts = remaining.club_id.value_counts()
+        pool = pool.loc[
+            ~pool.source_player_id.isin(squad.source_player_id)
+            & pool.club_id.map(club_counts).fillna(0).lt(3)
+        ]
+    pool = pool.assign(
+        projected_gain=pool[projection] - float(outgoing[projection]),
+        price_change=pool.price - float(outgoing.price),
+    )
+    if squad is None or len(squad) != 15:
+        return pool.sort_values(["projected_gain", "price"], ascending=[False, True]).head(limit)
+    # A swap only matters through the best XI it allows: upgrading a bench player who
+    # stays on the bench is worth nothing this horizon.
+    kept = squad.loc[squad.source_player_id.ne(outgoing.source_player_id)]
+    positions = [*kept.position_group, outgoing.position_group]
+    kept_points = kept[projection].to_numpy(float)
+    current = lineup_points(squad.position_group, squad[projection])
+    pool = pool.assign(
+        lineup_gain=[
+            lineup_points(positions, np.append(kept_points, points)) - current
+            for points in pool[projection]
+        ]
+    )
+    return pool.sort_values(
+        ["lineup_gain", "projected_gain", "price"], ascending=[False, False, True]
+    ).head(limit)
+
+
+def lineup_points(positions: Iterable[str], points: Iterable[float]) -> float:
+    """Expected points of the best legal XI from a 15-player squad, captain counted twice."""
+    by_position: dict[str, list[float]] = {position: [] for position in STARTER_LIMITS}
+    for position, value in zip(positions, points, strict=True):
+        by_position.setdefault(position, []).append(float(value))
+    ranked = {position: sorted(values, reverse=True) for position, values in by_position.items()}
+    if not ranked["GK"]:
+        raise ValueError("The squad cannot form a legal FPL starting XI")
+    best = -np.inf
+    for defenders in range(3, 6):
+        for midfielders in range(2, 6):
+            forwards = 10 - defenders - midfielders
+            if not 1 <= forwards <= 3:
+                continue
+            if (
+                len(ranked["DEF"]) < defenders
+                or len(ranked["MID"]) < midfielders
+                or len(ranked["FWD"]) < forwards
+            ):
+                continue
+            best = max(
+                best,
+                sum(ranked["DEF"][:defenders])
+                + sum(ranked["MID"][:midfielders])
+                + sum(ranked["FWD"][:forwards]),
+            )
+    if not np.isfinite(best):
+        raise ValueError("The squad cannot form a legal FPL starting XI")
+    captain = max(ranked[position][0] for position in STARTER_LIMITS if ranked[position])
+    return float(ranked["GK"][0] + best + captain)
+
+
+def best_single_transfers(
+    squad: pd.DataFrame,
+    players: pd.DataFrame,
+    *,
+    projection: str,
+    bank: float = 0.0,
+) -> pd.DataFrame:
+    """Return each squad player's best legal one-for-one swap, largest XI gain first."""
+    if len(squad) != 15:
+        raise ValueError("A complete mapped 15-player squad is required")
+    rows = []
+    for _, outgoing in squad.iterrows():
+        options = replacement_options(
+            players, outgoing, projection=projection, bank=bank, squad=squad, limit=1
+        )
+        if options.empty:
+            continue
+        incoming = options.iloc[0]
+        rows.append(
+            {
+                "out_id": int(outgoing.source_player_id),
+                "in_id": int(incoming.source_player_id),
+                "lineup_gain": float(incoming.lineup_gain),
+                "projected_gain": float(incoming.projected_gain),
+                "price_change": float(incoming.price_change),
+            }
+        )
+    result = pd.DataFrame(
+        rows, columns=["out_id", "in_id", "lineup_gain", "projected_gain", "price_change"]
+    )
+    return result.sort_values(
+        ["lineup_gain", "projected_gain"], ascending=False
+    ).reset_index(drop=True)
+
+
+def plan_transfers(
+    squad: pd.DataFrame,
+    players: pd.DataFrame,
+    *,
+    gameweeks: Iterable[int],
+    bank: float = 0.0,
+    free_transfers: int = 1,
+    max_free_transfers: int = 5,
+    minimum_gain: float = 1.0,
+    allow_hits: bool = False,
+    hit_cost: float = 4.0,
+    max_per_week: int = 3,
+) -> dict:
+    """Greedy week-by-week transfer plan over the prepared gameweek projections.
+
+    Each week the best single swap is taken while it adds at least ``minimum_gain``
+    points to the best XI over the remaining weeks (plus ``hit_cost`` once free transfers
+    run out and hits are allowed). A swap that does not help this week's XI is deferred,
+    which banks the free transfer, unless the bank of free transfers is already full.
+    This is a heuristic, not an optimal plan: it never looks ahead to combine moves.
+    """
+    weeks = tuple(int(value) for value in gameweeks)
+    columns = [f"projected_points_gw_{week}" for week in weeks]
+    if not weeks or not set(columns) <= set(players):
+        raise ValueError("Per-gameweek projections are incomplete")
+    if len(squad) != 15 or free_transfers < 0 or minimum_gain < 0:
+        raise ValueError("A 15-player squad and non-negative settings are required")
+    pool = players.copy()
+    current = pool.loc[pool.source_player_id.isin(squad.source_player_id)].copy()
+    if len(current) != 15:
+        raise ValueError("Some squad players are absent from the projections")
+    original = current.copy()
+    available, moves, summaries = int(free_transfers), [], []
+    for index, (week, column) in enumerate(zip(weeks, columns, strict=True)):
+        remaining = columns[index:]
+        pool["plan_value"] = pool[remaining].sum(axis=1)
+        current["plan_value"] = current[remaining].sum(axis=1)
+        made = hits = 0
+        while made < max_per_week:
+            paid = available <= 0
+            if paid and not allow_hits:
+                break
+            ranked = best_single_transfers(current, pool, projection="plan_value", bank=bank)
+            if ranked.empty:
+                break
+            best = ranked.iloc[0]
+            if best.lineup_gain < minimum_gain + (hit_cost if paid else 0.0):
+                break
+            incoming = pool.loc[pool.source_player_id.eq(int(best.in_id))]
+            after = pd.concat(
+                [current.loc[current.source_player_id.ne(int(best.out_id))], incoming]
+            )
+            this_week = lineup_points(after.position_group, after[column]) - lineup_points(
+                current.position_group, current[column]
+            )
+            last_week = index == len(weeks) - 1
+            if this_week <= 0 and not last_week and available < max_free_transfers:
+                break
+            outgoing = current.loc[current.source_player_id.eq(int(best.out_id))].iloc[0]
+            bank += float(outgoing.price) - float(incoming.price.iloc[0])
+            current = after
+            moves.append(
+                {
+                    "gameweek": week,
+                    "out_id": int(best.out_id),
+                    "in_id": int(best.in_id),
+                    "gain": float(best.lineup_gain),
+                    "hit": bool(paid),
+                }
+            )
+            made += 1
+            hits += int(paid)
+            available -= 0 if paid else 1
+        summaries.append(
+            {
+                "gameweek": week,
+                "transfers": made,
+                "hit_points": hits * hit_cost,
+                "plan_points": lineup_points(current.position_group, current[column])
+                - hits * hit_cost,
+                "hold_points": lineup_points(original.position_group, original[column]),
+                "free_transfers_left": available,
+                "bank": bank,
+            }
+        )
+        available = min(available + 1, max_free_transfers)
+    summary = pd.DataFrame(summaries)
+    return {
+        "moves": pd.DataFrame(moves, columns=["gameweek", "out_id", "in_id", "gain", "hit"]),
+        "weeks": summary,
+        "total_gain": float((summary.plan_points - summary.hold_points).sum()),
+        "final_squad": current.drop(columns="plan_value"),
+    }
 
 
 def optimize_squad(
@@ -239,100 +459,101 @@ def optimize_chip_schedule(
 def rolling_backtest(
     playerstats: pd.DataFrame,
     players: pd.DataFrame,
+    teams: pd.DataFrame,
+    matches: pd.DataFrame,
+    appearances: pd.DataFrame | None = None,
     *,
     position_map: dict[str, str],
     competition_id: str,
     season: str,
+    priors: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Evaluate prior-only minutes and point rates against the following gameweek."""
-    stats = playerstats.copy()
-    required = {"id", "gw", "event_points", "points_per_game", "minutes"}
-    if not required <= set(stats) or not {"player_id", "position"} <= set(players):
+    """Score the production event model on each gameweek from strictly earlier data.
+
+    For every target gameweek the player snapshot, appearance history and the
+    season-xG fixture strengths are rebuilt from earlier gameweeks only, then
+    :func:`project_players` predicts the target. Three references are kept beside it:
+    the position median, a points-per-90 rate model and the provider's own next-gameweek
+    estimate published before the target.
+    """
+    required = {"id", "gw", "event_points", "minutes"}
+    if not required <= set(playerstats) or not {"gameweek", "finished"} <= set(matches):
         raise ValueError("Backtest inputs are incomplete")
-    for column in ("gw", "event_points", "points_per_game", "minutes", "starts"):
-        if column not in stats:
-            stats[column] = 0
-        stats[column] = pd.to_numeric(stats[column], errors="coerce")
+    stats = playerstats.copy()
+    stats["gw"] = pd.to_numeric(stats.gw, errors="raise").astype(int)
+    stats["minutes"] = pd.to_numeric(stats.minutes, errors="coerce").fillna(0)
     stats = stats.sort_values(["id", "gw"])
-    if "total_points" not in stats:
-        stats["total_points"] = stats.groupby("id").event_points.cumsum()
-    stats["fixture_minutes"] = stats.groupby("id").minutes.diff().fillna(stats.minutes).clip(0, 90)
-    stats["fixture_starts"] = stats.groupby("id").starts.diff().fillna(stats.starts).clip(0, 1)
-    identity = players[["player_id", "position"]].copy()
-    identity["position_group"] = identity.position.map(position_map).fillna("UNKNOWN")
+    stats["fixture_minutes"] = stats.groupby("id").minutes.diff().fillna(stats.minutes).clip(0)
+    goals = pd.to_numeric(
+        stats.get("goals_scored", pd.Series(np.nan, index=stats.index)), errors="coerce"
+    )
+    stats["fixture_goals"] = goals.groupby(stats.id).diff().fillna(goals)
+    match_gameweek = pd.to_numeric(matches.gameweek, errors="coerce")
+    was_finished = matches.finished.astype(str).str.lower().isin({"true", "1"})
+    appearance_gameweek = (
+        pd.to_numeric(appearances.gameweek, errors="coerce") if appearances is not None else None
+    )
     rows = []
-    gameweeks = sorted(int(value) for value in stats.gw.dropna().unique())
-    for target_gw in gameweeks[1:]:
-        prior = (
-            stats.loc[stats.gw.lt(target_gw)]
-            .sort_values("gw")
-            .drop_duplicates("id", keep="last")
-        )
-        actual = stats.loc[
-            stats.gw.eq(target_gw), ["id", "event_points", "fixture_minutes"]
-        ].rename(
-            columns={"event_points": "actual_points", "fixture_minutes": "actual_minutes"}
-        )
-        frame = prior.merge(identity, left_on="id", right_on="player_id", validate="many_to_one")
-        frame = frame.merge(actual, on="id", validate="one_to_one")
-        frame = frame.loc[frame.minutes.gt(0)].copy()
-        if frame.empty:
+    for target_gw in sorted(stats.gw.unique())[1:]:
+        if not match_gameweek.eq(target_gw).any():
             continue
-        frame["source_player_id"] = frame.id.astype(int)
-        frame["gw"] = target_gw - 1
-        frame["chance_of_playing"] = pd.to_numeric(
-            frame.get("chance_of_playing_next_round", pd.Series(np.nan, index=frame.index)),
-            errors="coerce",
+        # Earlier results stay finished; the target and later weeks become unplayed fixtures.
+        schedule = matches.assign(finished=was_finished & match_gameweek.lt(target_gw))
+        schedule = schedule.loc[schedule.finished | match_gameweek.ge(target_gw)]
+        snapshot, history = latest_players(
+            stats.loc[stats.gw.lt(target_gw)].drop(columns=["fixture_minutes", "fixture_goals"]),
+            players,
+            teams,
+            competition_id=competition_id,
+            season=season,
+            position_map=position_map,
         )
-        frame["status"] = frame.get("status", pd.Series("a", index=frame.index)).fillna("a")
-        past = stats.loc[stats.gw.lt(target_gw)].merge(
-            identity, left_on="id", right_on="player_id", validate="many_to_one"
+        fixtures = fixture_rows(schedule, teams)
+        projected = project_players(
+            snapshot,
+            history,
+            fixtures,
+            appearances=(
+                appearances.loc[appearance_gameweek.lt(target_gw)]
+                if appearances is not None
+                else None
+            ),
+            priors=priors,
+            horizons=(1,),
         )
-        appearances = pd.DataFrame(
-            {
-                "player_id": past.id,
-                "match_id": past.id.astype(str) + ":gw" + past.gw.astype(int).astype(str),
-                "gameweek": past.gw,
-                "minutes_played": past.fixture_minutes,
-                "start_min": np.where(past.fixture_starts.gt(0), 0, 60),
+        # A double gameweek gives several fixtures: the chance of scoring in any of them.
+        markets = scorer_markets(projected, fixtures, target_gw)
+        projected["scorer_probability"] = projected.source_player_id.map(
+            1 - (1 - markets.scorer_probability).groupby(markets.source_player_id).prod()
+        ).fillna(0.0)
+        actual = stats.loc[
+            stats.gw.eq(target_gw), ["id", "event_points", "fixture_minutes", "fixture_goals"]
+        ].rename(
+            columns={
+                "id": "source_player_id",
+                "event_points": "actual_points",
+                "fixture_minutes": "actual_minutes",
             }
         )
-        minute_frame = expected_minutes_features(frame, appearances)
-        frame = frame.drop(
-            columns=[
-                "availability_probability",
-                "start_probability",
-                "appearance_probability",
-                "sixty_probability",
-                "expected_minutes",
-                "minutes_model_matches",
-            ],
-            errors="ignore",
-        ).merge(
-            minute_frame[
-                [
-                    "source_player_id",
-                    "expected_minutes",
-                    "start_probability",
-                    "appearance_probability",
-                    "sixty_probability",
-                ]
-            ],
-            on="source_player_id",
-            validate="one_to_one",
+        gameweek_goals = actual.pop("fixture_goals")
+        # 1.0 / 0.0, missing when the source has no goal counts.
+        actual["scored"] = gameweek_goals.gt(0).astype(float).where(gameweek_goals.notna())
+        frame = projected.loc[projected.minutes.gt(0)].merge(
+            actual, on="source_player_id", validate="one_to_one"
         )
-        observed_per90 = frame.total_points * 90 / frame.minutes
-        median_per90 = observed_per90.groupby(frame.position_group).transform("median").fillna(2)
-        reliability = frame.minutes / (frame.minutes + 450)
-        shrunk_per90 = reliability * observed_per90 + (1 - reliability) * median_per90
-        frame["predicted_points"] = shrunk_per90 * frame.expected_minutes / 90
+        if frame.empty:
+            continue
+        frame["actual_points"] = pd.to_numeric(frame.actual_points, errors="coerce")
+        frame = frame.dropna(subset=["actual_points"])
+        frame["predicted_points"] = frame.projected_points_1
+        frame["rate_model_points"] = frame.shrunk_points_per90 * frame.expected_minutes / 90
+        frame["provider_points"] = frame.provider_ep_next
         active_ppg = frame.points_per_game.where(frame.minutes.gt(0))
-        median_ppg = active_ppg.groupby(frame.position_group).transform("median").fillna(2)
-        frame["baseline_points"] = median_ppg
+        frame["baseline_points"] = (
+            active_ppg.groupby(frame.position_group).transform("median").fillna(2)
+        )
         frame["origin_gw"] = target_gw - 1
         frame["target_gw"] = target_gw
-        frame["competition_id"] = competition_id
-        frame["season"] = season
         rows.append(
             frame[
                 [
@@ -348,8 +569,12 @@ def rolling_backtest(
                     "appearance_probability",
                     "sixty_probability",
                     "predicted_points",
+                    "rate_model_points",
+                    "provider_points",
                     "baseline_points",
                     "actual_points",
+                    "scorer_probability",
+                    "scored",
                 ]
             ]
         )
@@ -362,12 +587,16 @@ def backtest_summary(backtest: pd.DataFrame) -> dict:
     """Summarize expected-points error and rank association without hiding sample size."""
     error = backtest.predicted_points - backtest.actual_points
     baseline_error = backtest.baseline_points - backtest.actual_points
-    minute_error = backtest.expected_minutes - backtest.actual_minutes
-    correlations = [
-        frame.predicted_points.corr(frame.actual_points, method="spearman")
-        for _, frame in backtest.groupby("target_gw")
-    ]
-    return {
+    minute_error = backtest.expected_minutes - backtest.actual_minutes.clip(upper=90)
+
+    def spearman(column: str) -> float:
+        values = [
+            frame[column].corr(frame.actual_points, method="spearman")
+            for _, frame in backtest.groupby("target_gw")
+        ]
+        return float(np.nanmean(values)) if np.isfinite(values).any() else float("nan")
+
+    summary = {
         "observations": int(len(backtest)),
         "gameweeks": sorted(int(value) for value in backtest.target_gw.unique()),
         "mae": float(error.abs().mean()),
@@ -377,5 +606,38 @@ def backtest_summary(backtest: pd.DataFrame) -> dict:
         "mean_predicted_points": float(backtest.predicted_points.mean()),
         "mean_actual_points": float(backtest.actual_points.mean()),
         "zero_point_rate": float(backtest.actual_points.eq(0).mean()),
-        "mean_spearman": float(np.nanmean(correlations)),
+        "mean_spearman": spearman("predicted_points"),
     }
+    scored = backtest.get("scored")
+    if scored is not None and scored.notna().any():
+        rows = backtest.loc[scored.notna()]
+        outcome = rows.scored.astype(float)
+        # Reference: each position's own scoring rate in this sample, a forecast that
+        # already knows the answer on average and so is hard to beat.
+        reference = outcome.groupby(rows.position_group).transform("mean")
+        bins = pd.cut(rows.scorer_probability, SCORER_BINS, include_lowest=True)
+        summary["scorer"] = {
+            "observations": int(len(rows)),
+            "brier": float(np.square(rows.scorer_probability - outcome).mean()),
+            "position_rate_brier": float(np.square(reference - outcome).mean()),
+            "mean_probability": float(rows.scorer_probability.mean()),
+            "scoring_rate": float(outcome.mean()),
+            "calibration": [
+                {
+                    "bin": str(interval),
+                    "n": int(len(group)),
+                    "predicted": float(group.scorer_probability.mean()),
+                    "observed": float(group.scored.astype(float).mean()),
+                }
+                for interval, group in rows.groupby(bins, observed=True)
+            ],
+        }
+    for name in ("rate_model", "provider"):
+        column = f"{name}_points"
+        if column in backtest and backtest[column].notna().any():
+            compared = backtest.dropna(subset=[column])
+            summary[f"{name}_mae"] = float(
+                (compared[column] - compared.actual_points).abs().mean()
+            )
+            summary[f"{name}_spearman"] = spearman(column)
+    return summary

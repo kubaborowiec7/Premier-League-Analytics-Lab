@@ -1,20 +1,39 @@
 """Fantasy planning projections and fixture context."""
 
 import httpx
+import numpy as np
 import pandas as pd
+import pytest
 
-from pl_analytics.data.fpl import fetch_public_team, map_public_squad
+from pl_analytics.data.fpl import (
+    fetch_league_picks,
+    fetch_league_standings,
+    fetch_public_team,
+    manager_summary,
+    map_public_squad,
+    model_goal_rates,
+)
 from pl_analytics.features.fpl import (
     expected_minutes_features,
     fixture_rows,
     latest_players,
+    league_ownership,
     league_table,
+    price_watch,
+    price_watch_backtest,
+    prior_season_rates,
     project_players,
+    scorer_markets,
+    season_goal_rates,
 )
 from pl_analytics.features.fpl_optimizer import (
     backtest_summary,
+    best_single_transfers,
+    lineup_points,
     optimize_chip_schedule,
     optimize_squad,
+    plan_transfers,
+    replacement_options,
     rolling_backtest,
     select_starting_xi,
 )
@@ -121,8 +140,27 @@ def test_fpl_projection_preserves_scope_and_fixture_horizons():
         season="2026/27",
         position_map={"Defender": "DEF", "Forward": "FWD"},
     )
-    fixtures = fixture_rows(matches, teams)
-    result = project_players(players, history, fixtures)
+    rates = pd.DataFrame(
+        {"match_id": ["m5", "m6"], "home_rate": [2.4, 0.7], "away_rate": [0.6, 2.2]}
+    )
+    fixtures = fixture_rows(matches, teams, rates)
+    priors = pd.DataFrame(
+        {"player_id": ["fpl:102"], "prior_minutes": [3000.0], "prior_xg_per90": [0.9]}
+    )
+    result = project_players(players, history, fixtures, priors=priors)
+    without_prior = project_players(players, history, fixtures)
+    forward = result.position_group.eq("FWD")
+    assert (
+        result.loc[forward, "projected_xg_per90"].iloc[0]
+        > without_prior.loc[forward, "projected_xg_per90"].iloc[0]
+    )
+    alpha = fixtures.loc[fixtures.club_name.eq("Alpha")].sort_values("gameweek")
+    assert alpha.rate_source.eq("goal-model").all()
+    assert alpha.expected_goals_for.tolist() == [2.4, 2.2]
+    assert alpha.attack_difficulty.tolist() == [1, 1] and alpha.defence_difficulty.iloc[0] == 1
+    beta = fixtures.loc[fixtures.club_name.eq("Beta")]
+    assert beta.difficulty.eq(5).all()
+    assert alpha.clean_sheet_probability.iloc[0] > beta.clean_sheet_probability.max()
     assert set(result.competition_id) == {"TEST"}
     assert result.player_id.is_unique and fixtures.club_id.nunique() == 2
     assert result.projected_points_3.ge(result.projected_points_1).all()
@@ -135,7 +173,101 @@ def test_fpl_projection_preserves_scope_and_fixture_horizons():
         "xpts_clean_sheet_1",
         "xpts_saves_1",
     } <= set(result)
-    assert fixtures.loc[fixtures.club_name.eq("Alpha"), "difficulty"].iloc[0] == 1
+    assert alpha.difficulty.iloc[0] == 1
+    markets = scorer_markets(result, fixtures).set_index("position_group")
+    assert set(markets.gameweek) == {5}
+    assert markets.scorer_probability.between(0, 1).all()
+    # The forward has the higher expected goals and the kinder fixture multiplier is his own.
+    assert markets.loc["FWD", "scorer_probability"] > markets.loc["DEF", "scorer_probability"]
+    # A mixture over minutes can never exceed the chance from playing the average minutes.
+    upper = 1 - np.exp(-markets.expected_scorer_events)
+    assert (markets.scorer_probability <= upper + 1e-12).all()
+    assert (markets.scorer_probability <= markets.appearance_probability).all()
+
+
+def _season_matches() -> pd.DataFrame:
+    rows = []
+    for gameweek, (home, away, home_xg, away_xg) in enumerate(
+        [(1, 2, 3.0, 0.4), (2, 1, 0.5, 2.6), (1, 2, 2.8, 0.3), (2, 1, 0.6, 2.9)], start=1
+    ):
+        rows.append(
+            dict(
+                match_id=f"m{gameweek}",
+                gameweek=gameweek,
+                kickoff_time=f"2026-08-{gameweek:02d}T12:00:00Z",
+                home_team=home,
+                away_team=away,
+                home_score=round(home_xg),
+                away_score=round(away_xg),
+                home_expected_goals_xg=home_xg,
+                away_expected_goals_xg=away_xg,
+                finished=gameweek <= 2,
+            )
+        )
+    return pd.DataFrame(rows)
+
+
+def test_season_goal_rates_use_only_finished_matches():
+    matches = _season_matches()
+    rates = season_goal_rates(matches).set_index("match_id")
+    # The stronger club (1) is expected to outscore the weaker one home and away.
+    assert rates.loc["m3", "home_rate"] > rates.loc["m3", "away_rate"]
+    assert rates.loc["m4", "away_rate"] > rates.loc["m4", "home_rate"]
+    changed = matches.copy()
+    changed.loc[~changed.finished, ["home_expected_goals_xg", "away_expected_goals_xg"]] = 9.0
+    pd.testing.assert_frame_equal(season_goal_rates(changed).set_index("match_id"), rates)
+    teams = pd.DataFrame(
+        [dict(code=1, name="Alpha", short_name="ALP"), dict(code=2, name="Beta", short_name="BET")]
+    )
+    fixtures = fixture_rows(matches, teams)
+    assert fixtures.rate_source.eq("season-xg").all()
+    assert set(fixtures.gameweek) == {3, 4}
+    alpha = fixtures.loc[fixtures.club_name.eq("Alpha")]
+    assert alpha.difficulty.max() < fixtures.loc[fixtures.club_name.eq("Beta")].difficulty.min()
+
+
+def test_goal_model_rates_match_clubs_by_normalised_name():
+    class Model:
+        teams = ("man-united", "spurs")
+
+        def rates(self, home: str, away: str) -> tuple[float, float]:
+            return (2.0, 1.0) if home == "man-united" else (1.1, 1.9)
+
+    teams = pd.DataFrame(
+        [
+            dict(code=1, name="Man Utd", short_name="MUN"),
+            dict(code=2, name="Spurs", short_name="TOT"),
+            dict(code=3, name="Newcomers", short_name="NEW"),
+        ]
+    )
+    clubs = pd.DataFrame(
+        {"club_id": ["man-united", "spurs"], "name": ["Man United", "Tottenham"]}
+    )
+    matches = pd.DataFrame(
+        [
+            dict(match_id="a", home_team=1, away_team=2),
+            dict(match_id="b", home_team=2, away_team=1),
+            dict(match_id="c", home_team=3, away_team=1),
+        ]
+    )
+    rates = model_goal_rates(matches, teams, Model(), clubs).set_index("match_id")
+    assert rates.loc["a"].tolist() == [2.0, 1.0] and rates.loc["b"].tolist() == [1.1, 1.9]
+    assert "c" not in rates.index
+
+
+def test_prior_season_rates_use_final_gameweek_and_stable_identity():
+    stats = pd.DataFrame(
+        [
+            dict(id=7, gw=1, minutes=90, expected_goals_per_90=0.1, bonus=0),
+            dict(id=7, gw=38, minutes=1800, expected_goals_per_90=0.5, bonus=20),
+            dict(id=8, gw=38, minutes=0, expected_goals_per_90=0.0, bonus=0),
+        ]
+    )
+    players = pd.DataFrame({"player_id": [7, 8], "player_code": [500, 501]})
+    priors = prior_season_rates(stats, players)
+    assert priors.player_id.tolist() == ["fpl:500"]
+    assert priors.prior_xg_per90.iloc[0] == 0.5 and priors.prior_minutes.iloc[0] == 1800
+    assert priors.prior_raw_projected_bonus_per90.iloc[0] == 1.0
 
 
 def test_expected_minutes_favors_recent_starts_over_old_absences():
@@ -263,40 +395,247 @@ def test_optimizer_returns_legal_squad_lineup_and_captain():
     assert schedule.recommended_gameweek.is_unique
 
 
-def test_rolling_backtest_is_invariant_to_later_gameweek_changes():
-    identities = pd.DataFrame(
+def test_transfer_options_value_the_best_xi_and_respect_squad_rules():
+    pool = _optimizer_pool().assign(expected_minutes=80.0)
+    squad = optimize_squad(pool, budget=100, projection="projected_points_1")
+    lineup = select_starting_xi(squad, "projected_points_1")
+    starters = lineup.loc[lineup.is_starter]
+    captain = starters.loc[starters.is_recommended_captain, "projected_points_1"].iloc[0]
+    assert lineup_points(squad.position_group, squad.projected_points_1) == pytest.approx(
+        starters.projected_points_1.sum() + captain
+    )
+    # A cheap squad leaves upgrades available, so the helpers have something to rank.
+    weak = pd.concat(
         [
-            {"player_id": player, "position": "Defender" if player == 1 else "Forward"}
-            for player in (1, 2)
+            pool.loc[pool.position_group.eq(position)].nsmallest(count, "projected_points_1")
+            for position, count in {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}.items()
         ]
     )
+    outgoing = weak.loc[weak.position_group.eq("MID")].nlargest(1, "projected_points_1").iloc[0]
+    options = replacement_options(
+        pool, outgoing, projection="projected_points_1", bank=5.0, squad=weak
+    )
+    assert not options.source_player_id.isin(weak.source_player_id).any()
+    assert options.position_group.eq("MID").all()
+    assert options.price.le(outgoing.price + 5.0).all()
+    assert options.lineup_gain.is_monotonic_decreasing and options.lineup_gain.iloc[0] > 0
+    clubs_after = weak.loc[weak.source_player_id.ne(outgoing.source_player_id)].club_id
+    assert all(clubs_after.eq(club).sum() < 3 for club in options.club_id)
+    ranked = best_single_transfers(weak, pool, projection="projected_points_1", bank=5.0)
+    assert ranked.lineup_gain.is_monotonic_decreasing and ranked.out_id.is_unique
+    free = replacement_options(pool, outgoing, projection="projected_points_1", bank=5.0)
+    assert "lineup_gain" not in free and free.projected_gain.is_monotonic_decreasing
+
+
+def test_transfer_plan_uses_free_transfers_and_never_loses_points():
+    pool = _optimizer_pool().assign(expected_minutes=80.0)
+    weak = pd.concat(
+        [
+            pool.loc[pool.position_group.eq(position)].nsmallest(count, "projected_points_1")
+            for position, count in {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}.items()
+        ]
+    )
+    weeks = range(6, 11)
+    plan = plan_transfers(weak, pool, gameweeks=weeks, bank=5.0, free_transfers=1)
+    moves, summary = plan["moves"], plan["weeks"]
+    assert summary.gameweek.tolist() == list(weeks) and not moves.empty
+    assert not moves.hit.any() and summary.hit_points.eq(0).all()
+    # One free transfer a week: never more moves than transfers accrued so far.
+    assert (moves.groupby("gameweek").size().reindex(weeks, fill_value=0).cumsum()
+            <= pd.Series(range(1, 6), index=weeks)).all()
+    assert (summary.plan_points >= summary.hold_points - 1e-9).all() and plan["total_gain"] > 0
+    assert moves.in_id.is_unique and not moves.in_id.isin(weak.source_player_id).any()
+    final = plan["final_squad"]
+    assert len(final) == 15 and final.groupby("club_id").size().max() <= 3
+    assert final.groupby("position_group").size().to_dict() == {
+        "DEF": 5,
+        "FWD": 3,
+        "GK": 2,
+        "MID": 5,
+    }
+    assert final.price.sum() <= weak.price.sum() + 5.0 + 1e-9
+    with_hits = plan_transfers(
+        weak, pool, gameweeks=weeks, bank=5.0, free_transfers=0, allow_hits=True
+    )
+    assert with_hits["moves"].hit.any()
+    held = plan_transfers(weak, pool, gameweeks=weeks, free_transfers=0)
+    assert held["moves"].loc[held["moves"].gameweek.eq(6)].empty
+    with pytest.raises(ValueError):
+        plan_transfers(weak.head(14), pool, gameweeks=weeks)
+
+
+def test_price_watch_ranks_by_net_transfers_and_scores_itself():
+    players = pd.DataFrame(
+        {
+            "player_name": list("ABCD"),
+            "price": [5.0, 6.0, 7.0, 8.0],
+            "net_transfers_event": [900.0, -400.0, 50.0, None],
+        }
+    )
+    watch = price_watch(players, top_n=1)
+    assert watch.player_name.tolist() == ["A", "B"] and watch.direction.tolist() == ["rise", "fall"]
+    stats = pd.DataFrame(
+        [
+            dict(id=player, gw=gw, now_cost=50 + step * (gw - 1),
+                 transfers_in_event=bought, transfers_out_event=sold)
+            for player, (bought, sold, step) in enumerate(
+                [(900, 100, 1), (100, 900, -1), (300, 300, 0), (310, 300, 0)], start=1
+            )
+            for gw in (1, 2, 3, 4)
+        ]
+    )
+    report = price_watch_backtest(stats, top_n=1)
+    # The most-bought player rises and the most-sold falls in every scored gameweek.
+    assert report["gameweeks"] == 2 and report["rise_hit_rate"] == 1.0
+    assert report["fall_hit_rate"] == 1.0 and report["rise_base_rate"] == 0.25
+
+
+def test_league_ownership_separates_my_picks_from_rival_shares():
+    picks = pd.DataFrame(
+        [
+            dict(entry=1, element=10, multiplier=2, is_captain=True),
+            dict(entry=1, element=11, multiplier=0, is_captain=False),
+            dict(entry=2, element=10, multiplier=1, is_captain=False),
+            dict(entry=2, element=12, multiplier=2, is_captain=True),
+            dict(entry=3, element=12, multiplier=1, is_captain=False),
+            dict(entry=3, element=13, multiplier=0, is_captain=False),
+        ]
+    )
+    result = league_ownership(picks, my_entry=1).set_index("source_player_id")
+    assert result.rivals.eq(2).all()
+    assert result.loc[10, ["owned_share", "mine", "my_captain"]].tolist() == [0.5, True, True]
+    assert result.loc[11, ["owned_share", "mine"]].tolist() == [0.0, True]
+    assert result.loc[12, ["owned_share", "captain_share", "mine"]].tolist() == [1.0, 0.5, False]
+    assert result.loc[13, "started_share"] == 0.0
+    with pytest.raises(ValueError):
+        league_ownership(picks.loc[picks.entry.eq(1)], my_entry=1)
+
+
+def test_league_fetch_drops_manager_names_and_skips_unreadable_squads():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "leagues-classic/77/standings" in str(request.url):
+            assert request.url.params["page_standings"] == "3"
+            return httpx.Response(
+                200,
+                json={
+                    "league": {"name": "Rivals"},
+                    "standings": {
+                        "results": [
+                            dict(entry=5, entry_name="Five", player_name="Real Name",
+                                 rank=101, total=300, event_total=40),
+                            dict(entry=6, entry_name="Six", player_name="Other Name",
+                                 rank=102, total=290, event_total=55),
+                        ]
+                    },
+                },
+            )
+        if "/entry/6/" in str(request.url):
+            return httpx.Response(404)
+        return httpx.Response(
+            200,
+            json={
+                "picks": [
+                    dict(element=index, multiplier=1, is_captain=index == 1)
+                    for index in range(1, 16)
+                ]
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        name, standings = fetch_league_standings(league_id=77, page=3, client=client)
+        picks = fetch_league_picks(entries=[5, 6], event=4, client=client)
+        with pytest.raises(ValueError):
+            fetch_league_picks(entries=[6], event=4, client=client)
+    assert name == "Rivals" and "player_name" not in standings
+    assert standings.entry_name.tolist() == ["Five", "Six"]
+    assert set(picks.entry) == {5} and len(picks) == 15
+    summary = manager_summary(
+        9,
+        {
+            "name": "Mine",
+            "player_first_name": "Private",
+            "leagues": {
+                "classic": [
+                    dict(id=314, name="Overall", league_type="s", entry_rank=1, rank_count=9),
+                    dict(id=77, name="Rivals", league_type="x", entry_rank=3, rank_count=20),
+                ]
+            },
+        },
+        5,
+    )
+    assert [league["id"] for league in summary["leagues"]] == [77]
+    assert "Private" not in str(summary)
+
+
+def _backtest_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     stats = pd.DataFrame(
         [
             {
                 "id": player,
                 "gw": gw,
+                "now_cost": 50,
+                "total_points": (player + 2) * gw,
                 "event_points": player + gw,
-                "points_per_game": player + gw / 2,
+                "points_per_game": player + 2,
                 "minutes": 90 * gw,
+                "starts": gw,
+                "expected_goals_per_90": 0.2 * player,
+                "expected_assists_per_90": 0.1,
+                "ep_next": 3.0,
+                "goals_scored": gw if player == 2 else 0,
                 "status": "a",
             }
             for gw in (1, 2, 3)
             for player in (1, 2)
         ]
     )
+    identities = pd.DataFrame(
+        [
+            dict(
+                player_id=player,
+                player_code=100 + player,
+                first_name="Test",
+                second_name=str(player),
+                position="Defender" if player == 1 else "Forward",
+                team_code=player,
+            )
+            for player in (1, 2)
+        ]
+    )
+    teams = pd.DataFrame(
+        [
+            dict(code=1, name="Alpha", short_name="ALP", elo=None),
+            dict(code=2, name="Beta", short_name="BET", elo=None),
+        ]
+    )
+    matches = _season_matches().loc[lambda frame: frame.gameweek.le(3)].assign(finished=True)
+    return stats, identities, teams, matches
+
+
+def test_rolling_backtest_is_invariant_to_later_gameweek_changes():
+    stats, identities, teams, matches = _backtest_inputs()
     kwargs = {
         "position_map": {"Defender": "DEF", "Forward": "FWD"},
         "competition_id": "TEST",
         "season": "2026/27",
     }
-    original = rolling_backtest(stats, identities, **kwargs)
+    original = rolling_backtest(stats, identities, teams, matches, **kwargs)
     changed = stats.copy()
-    changed.loc[changed.gw.eq(3), ["event_points", "points_per_game"]] = 999
-    mutated = rolling_backtest(changed, identities, **kwargs)
-    columns = ["source_player_id", "predicted_points"]
+    changed.loc[changed.gw.ge(2), ["event_points", "total_points", "expected_goals_per_90"]] = 999
+    later = matches.copy()
+    later.loc[later.gameweek.ge(2), ["home_expected_goals_xg", "away_expected_goals_xg"]] = 9.0
+    mutated = rolling_backtest(changed, identities, teams, later, **kwargs)
+    columns = ["source_player_id", "predicted_points", "rate_model_points", "provider_points"]
     pd.testing.assert_frame_equal(
         original.loc[original.target_gw.eq(2), columns].reset_index(drop=True),
         mutated.loc[mutated.target_gw.eq(2), columns].reset_index(drop=True),
     )
     summary = backtest_summary(original)
     assert summary["observations"] == 4 and summary["gameweeks"] == [2, 3]
+    assert {"rate_model_mae", "provider_mae"} <= set(summary)
+    # The forward scores every gameweek and the defender never does.
+    scorer = summary["scorer"]
+    assert scorer["observations"] == 4 and scorer["scoring_rate"] == 0.5
+    assert original.groupby("position_group").scored.mean().to_dict() == {"DEF": 0.0, "FWD": 1.0}
+    assert original.scorer_probability.between(0, 1).all()
+    assert sum(row["n"] for row in scorer["calibration"]) == 4

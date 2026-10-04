@@ -6,6 +6,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import joblib
 import pandas as pd
 
 from pl_analytics.config import get_settings
@@ -18,6 +19,8 @@ from pl_analytics.data.fpl import build_fpl_artifacts
 from pl_analytics.data.match_history import read_match_history
 from pl_analytics.features.advanced_players import METRICS, summarize_players
 from pl_analytics.models.live_match import build_live_match_artifacts
+
+GOAL_MODEL = "dixon_coles_half365"
 
 
 def _profiles(config: dict, raw_dir: Path) -> tuple[pd.DataFrame, list[dict]]:
@@ -86,13 +89,6 @@ def main() -> None:
         reference_date=origin.date().isoformat(),
     )
     profiles, coverage = _profiles(player_config, settings.data_dir / "raw")
-    fpl = build_fpl_artifacts(
-        player_config,
-        settings.data_dir / "raw",
-        settings.data_dir / "processed/fpl",
-        entry_id=settings.fpl_entry_id,
-    )
-
     refreshed_at = now.isoformat()
     live = build_live_match_artifacts(
         history,
@@ -102,6 +98,18 @@ def main() -> None:
         origin=origin,
         source_sha256=match_snapshot.sha256,
         refreshed_at=refreshed_at,
+    )
+    # The live goal model is fitted first so FPL fixture difficulty reflects opponents.
+    live_root = settings.artifact_dir
+    statistics = joblib.load(live_root / live["paths"]["statistics"])
+    goal_model = statistics["models"].get(GOAL_MODEL)
+    fpl = build_fpl_artifacts(
+        player_config,
+        settings.data_dir / "raw",
+        settings.data_dir / "processed/fpl",
+        entry_id=settings.fpl_entry_id,
+        goal_model=goal_model,
+        model_clubs=pd.read_parquet(live_root / live["paths"]["clubs"]),
     )
     destination = settings.data_dir / "processed/advanced"
     destination.mkdir(parents=True, exist_ok=True)

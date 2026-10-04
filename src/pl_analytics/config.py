@@ -36,6 +36,12 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+    @field_validator("fpl_entry_id", mode="before")
+    @classmethod
+    def blank_entry_is_unset(cls, value: object) -> object:
+        """Treat FPL_ENTRY_ID= (set but empty, as in CI without the variable) as unset."""
+        return None if isinstance(value, str) and not value.strip() else value
+
     @field_validator("active_competitions", mode="before")
     @classmethod
     def parse_competitions(cls, value: object) -> object:

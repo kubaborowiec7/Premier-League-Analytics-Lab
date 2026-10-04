@@ -10,7 +10,34 @@ HORIZONS = (1, 2, 3, 4, 5)
 GOAL_POINTS = {"GK": 10.0, "DEF": 6.0, "MID": 5.0, "FWD": 4.0}
 CLEAN_SHEET_POINTS = {"GK": 4.0, "DEF": 4.0, "MID": 1.0, "FWD": 0.0}
 RECENCY_DECAY = 0.65
-MINUTES_PRIOR_STRENGTH = 1.0
+# A quarter-match position prior: stronger priors under-rated nailed starters in the backtest.
+MINUTES_PRIOR_STRENGTH = 0.25
+SPREAD_PRIOR_WEEKS = 10.0
+SUBSTITUTE_MINUTES = 20.0
+DEFAULT_HOME_GOALS = 1.5
+DEFAULT_AWAY_GOALS = 1.2
+STRENGTH_PRIOR_MATCHES = 6.0
+# Ascending edges for the 1 (easiest) â€“ 5 (hardest) fixture bands.
+OVERALL_DIFFICULTY_EDGES = (-0.75, -0.25, 0.25, 0.75)  # expected goals against â’ for
+ATTACK_DIFFICULTY_EDGES = (-1.9, -1.55, -1.25, -1.0)  # â’expected goals for
+DEFENCE_DIFFICULTY_EDGES = (0.9, 1.15, 1.45, 1.75)  # expected goals against
+# Last season's minutes count for half, capped so one season cannot dominate current form.
+PRIOR_SEASON_WEIGHT = 0.5
+PRIOR_SEASON_MINUTES_CAP = 1800.0
+PRIOR_RATE_COLUMNS = {
+    "xg_per90": "expected_goals_per_90",
+    "xa_per90": "expected_assists_per_90",
+    "defensive_contribution_per90": "defensive_contribution_per_90",
+    "saves_per_90": "saves_per_90",
+}
+TOTAL_RATE_TARGETS = {
+    "penalties_saved": "projected_penalty_saves_per90",
+    "bonus": "projected_bonus_per90",
+    "yellow_cards": "projected_yellow_cards_per90",
+    "red_cards": "projected_red_cards_per90",
+    "own_goals": "projected_own_goals_per90",
+    "penalties_missed": "projected_penalties_missed_per90",
+}
 
 
 def latest_players(
@@ -102,34 +129,101 @@ def latest_players(
     latest["net_transfers_event"] = latest.transfers_in_event - latest.transfers_out_event
     status = latest.get("status", pd.Series("a", index=latest.index))
     latest["status"] = status.fillna("a").astype(str)
+    news = latest.get("news", pd.Series("", index=latest.index))
+    latest["news"] = news.fillna("").astype(str)
     return latest, history
 
 
-def fixture_rows(matches: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
-    """Expand scheduled matches to one leakage-safe planning row per club and fixture."""
+def _finished(matches: pd.DataFrame) -> pd.Series:
+    return matches.finished.astype(str).str.lower().isin({"true", "1"})
+
+
+def season_goal_rates(matches: pd.DataFrame) -> pd.DataFrame:
+    """Estimate each scheduled match's goal rates from this season's completed matches.
+
+    Club attack and defence ratios use xG (goals where xG is absent), shrunk toward the
+    league average with the weight of ``STRENGTH_PRIOR_MATCHES`` matches. Only completed
+    rows inform the ratios, so the caller controls leakage by what it marks finished.
+    """
+    done = matches.loc[_finished(matches)] if "finished" in matches else matches.iloc[0:0]
+    sides = []
+    for side, other in (("home", "away"), ("away", "home")):
+        columns = {}
+        for role, source in (("for", side), ("against", other)):
+            xg = pd.to_numeric(
+                done.get(f"{source}_expected_goals_xg", pd.Series(np.nan, index=done.index)),
+                errors="coerce",
+            )
+            goals = pd.to_numeric(
+                done.get(f"{source}_score", pd.Series(np.nan, index=done.index)), errors="coerce"
+            )
+            columns[role] = xg.fillna(goals)
+        sides.append(
+            pd.DataFrame({"club": done.get(f"{side}_team"), "venue": side, **columns}).dropna()
+        )
+    long = pd.concat(sides, ignore_index=True)
+    home_mean = float(long.loc[long.venue.eq("home"), "for"].mean()) if len(long) else np.nan
+    away_mean = float(long.loc[long.venue.eq("away"), "for"].mean()) if len(long) else np.nan
+    home_mean = home_mean if np.isfinite(home_mean) and home_mean > 0 else DEFAULT_HOME_GOALS
+    away_mean = away_mean if np.isfinite(away_mean) and away_mean > 0 else DEFAULT_AWAY_GOALS
+    mean = (home_mean + away_mean) / 2
+    prior = STRENGTH_PRIOR_MATCHES * mean
+    totals = long.groupby("club").agg(played=("for", "size"), scored=("for", "sum"),
+                                      conceded=("against", "sum"))
+    attack = ((totals.scored + prior) / (totals.played * mean + prior)).to_dict()
+    defence = ((totals.conceded + prior) / (totals.played * mean + prior)).to_dict()
+    return pd.DataFrame(
+        {
+            "match_id": matches.match_id.astype(str),
+            "home_rate": [
+                home_mean * attack.get(home, 1.0) * defence.get(away, 1.0)
+                for home, away in zip(matches.home_team, matches.away_team, strict=True)
+            ],
+            "away_rate": [
+                away_mean * attack.get(away, 1.0) * defence.get(home, 1.0)
+                for home, away in zip(matches.home_team, matches.away_team, strict=True)
+            ],
+        }
+    )
+
+
+def fixture_rows(
+    matches: pd.DataFrame,
+    teams: pd.DataFrame,
+    goal_rates: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Expand scheduled matches to one leakage-safe planning row per club and fixture.
+
+    ``goal_rates`` (``match_id``, ``home_rate``, ``away_rate``) normally comes from the
+    live goal model. Matches it does not cover fall back to :func:`season_goal_rates`.
+    """
     required = {"gameweek", "kickoff_time", "home_team", "away_team", "finished", "match_id"}
     if not required <= set(matches):
         raise ValueError("FPL fixture fields are missing")
     club_lookup = teams.set_index("code")
+    rates = season_goal_rates(matches).set_index("match_id")
+    rates["rate_source"] = "season-xg"
+    if goal_rates is not None and not goal_rates.empty:
+        supplied = goal_rates.assign(match_id=goal_rates.match_id.astype(str)).set_index(
+            "match_id"
+        )[["home_rate", "away_rate"]]
+        supplied = supplied.loc[supplied.index.isin(rates.index)].dropna()
+        rates.loc[supplied.index, ["home_rate", "away_rate"]] = supplied
+        rates.loc[supplied.index, "rate_source"] = "goal-model"
     rows: list[dict] = []
     for match in matches.itertuples(index=False):
         if str(match.finished).lower() in {"true", "1"}:
             continue
-        for venue, team_code, opponent_code in (
-            ("H", match.home_team, match.away_team),
-            ("A", match.away_team, match.home_team),
+        rate = rates.loc[str(match.match_id)]
+        for venue, team_code, opponent_code, scored, conceded in (
+            ("H", match.home_team, match.away_team, rate.home_rate, rate.away_rate),
+            ("A", match.away_team, match.home_team, rate.away_rate, rate.home_rate),
         ):
             if team_code not in club_lookup.index or opponent_code not in club_lookup.index:
                 raise ValueError("Fixture references an unknown FPL club")
             club = club_lookup.loc[team_code]
             opponent = club_lookup.loc[opponent_code]
-            team_elo = pd.to_numeric(club.elo, errors="coerce")
-            opponent_elo = pd.to_numeric(opponent.elo, errors="coerce")
-            if pd.isna(team_elo) or pd.isna(opponent_elo):
-                advantage = 80.0 if venue == "H" else -80.0
-            else:
-                advantage = float(team_elo - opponent_elo + (80 if venue == "H" else -80))
-            difficulty = int(np.digitize(-advantage, [-150, -50, 50, 150]) + 1)
+            scored, conceded = float(scored), float(conceded)
             rows.append(
                 {
                     "match_id": str(match.match_id),
@@ -142,15 +236,78 @@ def fixture_rows(matches: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
                     "opponent_name": opponent["name"],
                     "opponent_short_name": opponent["short_name"],
                     "venue": venue,
-                    "difficulty": difficulty,
-                    "attack_multiplier": float(np.clip(np.exp(advantage / 1000), 0.72, 1.35)),
-                    "clean_sheet_probability": float(np.clip(0.29 + advantage / 1600, 0.08, 0.58)),
+                    "expected_goals_for": scored,
+                    "expected_goals_against": conceded,
+                    "difficulty": _band(conceded - scored, OVERALL_DIFFICULTY_EDGES),
+                    "attack_difficulty": _band(-scored, ATTACK_DIFFICULTY_EDGES),
+                    "defence_difficulty": _band(conceded, DEFENCE_DIFFICULTY_EDGES),
+                    "clean_sheet_probability": float(np.clip(np.exp(-conceded), 0.02, 0.75)),
+                    "rate_source": rate.rate_source,
                 }
             )
     result = pd.DataFrame(rows)
     if result.empty or result.duplicated(["match_id", "club_id"]).any():
         raise ValueError("FPL fixture schedule is empty or ambiguous")
+    # Player per-90 rates already contain their club's typical attack, so a fixture scales
+    # them by its expected goals relative to that club's average over the listed schedule.
+    typical = result.groupby("club_id").expected_goals_for.transform("mean")
+    result["attack_multiplier"] = (result.expected_goals_for / typical).clip(0.6, 1.6)
     return result.sort_values(["gameweek", "kickoff_time", "club_name"]).reset_index(drop=True)
+
+
+def _band(value: float, edges: tuple[float, ...]) -> int:
+    """Map a value to a 1 (easiest) â€“ 5 (hardest) band using ascending edges."""
+    return int(np.digitize(value, edges) + 1)
+
+
+def match_results(matches: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
+    """Return completed matches, one row each, with scores, xG and club identities."""
+    required = {
+        "match_id",
+        "gameweek",
+        "kickoff_time",
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+        "finished",
+    }
+    if not required <= set(matches) or not {"code", "name", "short_name"} <= set(teams):
+        raise ValueError("Match result fields are missing")
+    completed = matches.loc[matches.finished.astype(str).str.lower().isin({"true", "1"})]
+    clubs = teams.set_index("code")
+    rows = []
+    for match in completed.itertuples(index=False):
+        home, away = int(float(match.home_team)), int(float(match.away_team))
+        if home not in clubs.index or away not in clubs.index:
+            raise ValueError("Result references an unknown FPL club")
+        rows.append(
+            {
+                "match_id": str(match.match_id),
+                "gameweek": int(float(match.gameweek)),
+                "kickoff_time": pd.to_datetime(match.kickoff_time, utc=True),
+                "home_club_id": f"fpl:club:{home}",
+                "home_name": clubs.loc[home, "name"],
+                "home_short_name": clubs.loc[home, "short_name"],
+                "away_club_id": f"fpl:club:{away}",
+                "away_name": clubs.loc[away, "name"],
+                "away_short_name": clubs.loc[away, "short_name"],
+                "home_score": int(float(match.home_score)),
+                "away_score": int(float(match.away_score)),
+                "home_xg": pd.to_numeric(
+                    getattr(match, "home_expected_goals_xg", np.nan), errors="coerce"
+                ),
+                "away_xg": pd.to_numeric(
+                    getattr(match, "away_expected_goals_xg", np.nan), errors="coerce"
+                ),
+            }
+        )
+    result = pd.DataFrame(rows)
+    if result.empty:
+        return result
+    if result.match_id.duplicated().any():
+        raise ValueError("Completed match results are duplicated")
+    return result.sort_values(["kickoff_time", "home_name"]).reset_index(drop=True)
 
 
 def league_table(
@@ -435,13 +592,71 @@ def expected_minutes_features(
     ).merge(pd.DataFrame(estimates), on="source_player_id", validate="one_to_one")
 
 
+def prior_season_rates(playerstats: pd.DataFrame, players: pd.DataFrame) -> pd.DataFrame:
+    """Return a completed earlier season's final per-90 rates keyed by stable player id.
+
+    The result supplies player-specific priors, so an established player is not pulled
+    toward the position median just because the new season is only a few matches old.
+    """
+    if not {"id", "gw", "minutes"} <= set(playerstats) or not {
+        "player_id",
+        "player_code",
+    } <= set(players):
+        raise ValueError("Prior-season FPL fields are missing")
+    stats = playerstats.copy()
+    stats["gw"] = pd.to_numeric(stats.gw, errors="coerce")
+    final = stats.sort_values("gw").drop_duplicates("id", keep="last")
+    final = final.merge(
+        players[["player_id", "player_code"]], left_on="id", right_on="player_id", how="inner"
+    )
+    minutes = pd.to_numeric(final.minutes, errors="coerce").fillna(0)
+    result = pd.DataFrame(
+        {
+            "player_id": "fpl:" + final.player_code.astype(int).astype(str),
+            "prior_minutes": minutes,
+        }
+    )
+    for target, source in PRIOR_RATE_COLUMNS.items():
+        result[f"prior_{target}"] = pd.to_numeric(
+            final.get(source, pd.Series(np.nan, index=final.index)), errors="coerce"
+        ).to_numpy()
+    for total, target in TOTAL_RATE_TARGETS.items():
+        values = pd.to_numeric(
+            final.get(total, pd.Series(np.nan, index=final.index)), errors="coerce"
+        )
+        result[f"prior_raw_{target}"] = (values * 90 / minutes.replace(0, np.nan)).to_numpy()
+    result = result.loc[result.prior_minutes.gt(0)]
+    return result.drop_duplicates("player_id", keep="last").reset_index(drop=True)
+
+
 def _shrunk_per90(frame: pd.DataFrame, column: str, *, prior_minutes: float = 450) -> pd.Series:
-    """Shrink a per-90 rate toward an active position median."""
+    """Blend a per-90 rate with the player's previous season and the position median.
+
+    Each source is weighted by minutes: this season's, a discounted and capped share of
+    last season's (when ``prior_<column>`` is present), and ``prior_minutes`` of the
+    position's minutes-weighted mean.
+    """
     values = pd.to_numeric(frame.get(column, pd.Series(np.nan, index=frame.index)), errors="coerce")
-    active = values.where(frame.minutes.gt(0))
-    prior = active.groupby(frame.position_group).transform("median").fillna(0)
-    reliability = frame.minutes / (frame.minutes + prior_minutes)
-    return (reliability * values.fillna(prior) + (1 - reliability) * prior).clip(lower=0)
+    # The anchor is the minutes-weighted position mean: a median would sit near zero for
+    # skewed events (goals, bonus) and bias every low-minutes player downwards.
+    weighted = (values.fillna(0) * frame.minutes).groupby(frame.position_group).transform("sum")
+    exposure = frame.minutes.where(values.notna(), 0).groupby(frame.position_group).transform("sum")
+    median = (weighted / exposure.replace(0, np.nan)).fillna(0)
+    previous = pd.to_numeric(
+        frame.get(f"prior_{column}", pd.Series(np.nan, index=frame.index)), errors="coerce"
+    )
+    previous_minutes = pd.to_numeric(
+        frame.get("prior_minutes", pd.Series(0.0, index=frame.index)), errors="coerce"
+    ).fillna(0)
+    previous_weight = (
+        PRIOR_SEASON_WEIGHT * previous_minutes.clip(upper=PRIOR_SEASON_MINUTES_CAP)
+    ).where(previous.notna(), 0.0)
+    blended = (
+        frame.minutes * values.fillna(median)
+        + previous_weight * previous.fillna(0)
+        + prior_minutes * median
+    ) / (frame.minutes + previous_weight + prior_minutes)
+    return blended.clip(lower=0)
 
 
 def _expected_integer_awards(rate: float, divisor: int) -> float:
@@ -459,14 +674,18 @@ def project_players(
     fixtures: pd.DataFrame,
     *,
     appearances: pd.DataFrame | None = None,
+    priors: pd.DataFrame | None = None,
     horizons: Iterable[int] = HORIZONS,
 ) -> pd.DataFrame:
     """Project simple expected FPL points from current rates and future fixture context.
 
     This deliberately transparent baseline uses only information available at the
-    refresh origin. It is a planning estimate, not a claim of calibrated certainty.
+    refresh origin. ``priors`` (see :func:`prior_season_rates`) adds player-specific
+    previous-season rates. It is a planning estimate, not a claim of calibrated certainty.
     """
     result = expected_minutes_features(players, appearances)
+    if priors is not None and not priors.empty:
+        result = result.merge(priors, on="player_id", how="left", validate="many_to_one")
     reliability = result.minutes / (result.minutes + 450)
     result["reliability"] = reliability.clip(0, 1)
     observed_rate = result.total_points * 90 / result.minutes.replace(0, np.nan)
@@ -486,31 +705,36 @@ def project_players(
         ("saves_per_90", "projected_saves_per90"),
     ):
         result[target] = _shrunk_per90(result, source)
-    for total, target in (
-        ("penalties_saved", "projected_penalty_saves_per90"),
-        ("bonus", "projected_bonus_per90"),
-        ("yellow_cards", "projected_yellow_cards_per90"),
-        ("red_cards", "projected_red_cards_per90"),
-        ("own_goals", "projected_own_goals_per90"),
-        ("penalties_missed", "projected_penalties_missed_per90"),
-    ):
+    for total, target in TOTAL_RATE_TARGETS.items():
         values = pd.to_numeric(result.get(total, pd.Series(0, index=result.index)), errors="coerce")
         result[f"raw_{target}"] = values.fillna(0) * 90 / result.minutes.replace(0, np.nan)
         result[target] = _shrunk_per90(result, f"raw_{target}", prior_minutes=900)
-    point_sd = history.groupby("source_player_id").points.std().rename("historical_points_sd")
-    result = result.merge(point_sd, on="source_player_id", how="left", validate="one_to_one")
-    position_sd = result.groupby("position_group")["historical_points_sd"].transform("median")
-    result["historical_points_sd"] = result.historical_points_sd.fillna(position_sd).fillna(2.0)
+    spread = history.groupby("source_player_id").points.agg(["std", "count"])
+    spread.columns = ["historical_points_sd", "points_sd_weeks"]
+    result = result.merge(spread, on="source_player_id", how="left", validate="one_to_one")
+    position_sd = (
+        result.groupby("position_group")["historical_points_sd"].transform("median").fillna(2.0)
+    )
+    # A few gameweeks give a noisy spread (one haul inflates it), so pool the variance with
+    # the position's typical spread, weighted as SPREAD_PRIOR_WEEKS gameweeks.
+    weeks = result.points_sd_weeks.fillna(0)
+    own = result.historical_points_sd.fillna(position_sd)
+    result["historical_points_sd"] = np.sqrt(
+        (weeks * own**2 + SPREAD_PRIOR_WEEKS * position_sd**2) / (weeks + SPREAD_PRIOR_WEEKS)
+    )
+    result = result.drop(columns="points_sd_weeks")
 
     future_gameweeks = sorted(fixtures.gameweek.unique())
     horizon_values = sorted(set(int(value) for value in horizons))
     for horizon in horizon_values:
         gameweeks = future_gameweeks[:horizon]
         selected_fixtures = fixtures.loc[fixtures.gameweek.isin(gameweeks)]
+        by_club = {club: frame for club, frame in selected_fixtures.groupby("club_id")}
+        no_fixture = selected_fixtures.iloc[0:0]
         points, variances, labels = [], [], []
         component_rows: list[dict[str, float]] = []
         for player in result.itertuples(index=False):
-            schedule = selected_fixtures.loc[selected_fixtures.club_id.eq(player.club_id)]
+            schedule = by_club.get(player.club_id, no_fixture)
             projected = 0.0
             variance = 0.0
             descriptions = []
@@ -559,7 +783,14 @@ def project_players(
                 )
                 goals_conceded = 0.0
                 if player.position_group in {"GK", "DEF"}:
-                    conceded_rate = max(0.01, -np.log(fixture.clean_sheet_probability))
+                    conceded_rate = max(
+                        0.01,
+                        getattr(
+                            fixture,
+                            "expected_goals_against",
+                            -np.log(fixture.clean_sheet_probability),
+                        ),
+                    )
                     goals_conceded = -_expected_integer_awards(conceded_rate * minutes_factor, 2)
                 fixture_points = (
                     appearance
@@ -587,7 +818,7 @@ def project_players(
                 components["goals_conceded"] += float(goals_conceded)
             points.append(projected)
             variances.append(variance)
-            labels.append(" · ".join(descriptions) if descriptions else "Blank")
+            labels.append(" Â· ".join(descriptions) if descriptions else "Blank")
             component_rows.append(components)
         result[f"projected_points_{horizon}"] = points
         spread = 1.28 * np.sqrt(variances)
@@ -603,3 +834,133 @@ def project_players(
         result[f"projected_points_gw_{int(gameweek)}"] = np.maximum(0, cumulative - previous)
         previous = cumulative
     return result
+
+
+def price_watch(players: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    """Players under the most buying and selling pressure this gameweek.
+
+    Ranks by net transfers in the current gameweek. It is a watch list, not a model of
+    the game's price thresholds: it says who is most likely to move, not when.
+    """
+    if not {"net_transfers_event", "player_name", "price"} <= set(players):
+        raise ValueError("Price-watch fields are missing")
+    known = players.loc[players.net_transfers_event.notna()]
+    risers = known.loc[known.net_transfers_event.gt(0)].nlargest(top_n, "net_transfers_event")
+    fallers = known.loc[known.net_transfers_event.lt(0)].nsmallest(top_n, "net_transfers_event")
+    return pd.concat(
+        [risers.assign(direction="rise"), fallers.assign(direction="fall")], ignore_index=True
+    )
+
+
+def price_watch_backtest(playerstats: pd.DataFrame, top_n: int = 10) -> dict:
+    """How often the watch list was right: did the price move by the next gameweek?
+
+    For each gameweek snapshot the ``top_n`` players by net transfers in and out are
+    compared with the next snapshot's price. The first snapshot is skipped because prices
+    reset at the season start.
+    """
+    required = {"id", "gw", "now_cost", "transfers_in_event", "transfers_out_event"}
+    if not required <= set(playerstats):
+        raise ValueError("Price-watch backtest fields are missing")
+    stats = playerstats[list(required)].apply(pd.to_numeric, errors="coerce").dropna()
+    stats = stats.sort_values(["id", "gw"])
+    stats["next_cost"] = stats.groupby("id").now_cost.shift(-1)
+    stats["net"] = stats.transfers_in_event - stats.transfers_out_event
+    scored = stats.loc[stats.next_cost.notna() & stats.gw.gt(stats.gw.min())]
+    if scored.empty:
+        return {}
+    rose, fell = scored.next_cost.gt(scored.now_cost), scored.next_cost.lt(scored.now_cost)
+    top = scored.sort_values("net", ascending=False).groupby("gw").head(top_n)
+    bottom = scored.sort_values("net").groupby("gw").head(top_n)
+    return {
+        "top_n": top_n,
+        "gameweeks": int(scored.gw.nunique()),
+        "rise_hit_rate": float(top.next_cost.gt(top.now_cost).mean()),
+        "rise_base_rate": float(rose.mean()),
+        "fall_hit_rate": float(bottom.next_cost.lt(bottom.now_cost).mean()),
+        "fall_base_rate": float(fell.mean()),
+    }
+
+
+def league_ownership(picks: pd.DataFrame, my_entry: int) -> pd.DataFrame:
+    """Per player: how many rivals own, start and captain them, and whether I own them.
+
+    ``picks`` holds one row per manager and player with ``entry``, ``element``,
+    ``multiplier`` and ``is_captain``. Shares are over the rivals only, so a player I own
+    that no rival owns has a share of zero.
+    """
+    required = {"entry", "element", "multiplier", "is_captain"}
+    if not required <= set(picks) or picks.duplicated(["entry", "element"]).any():
+        raise ValueError("League picks are incomplete or duplicated")
+    rivals = picks.loc[picks.entry.ne(my_entry)]
+    managers = int(rivals.entry.nunique())
+    if managers == 0:
+        raise ValueError("No rival squads to compare with")
+    counts = rivals.groupby("element").agg(
+        owners=("entry", "nunique"),
+        starters=("multiplier", lambda values: int((values > 0).sum())),
+        captains=("is_captain", lambda values: int(values.astype(bool).sum())),
+    )
+    mine = picks.loc[picks.entry.eq(my_entry)].set_index("element")
+    result = counts.reindex(counts.index.union(mine.index)).fillna(0)
+    result["owned_share"] = result.owners / managers
+    result["started_share"] = result.starters / managers
+    result["captain_share"] = result.captains / managers
+    result["mine"] = result.index.isin(mine.index)
+    result["my_captain"] = result.index.isin(mine.index[mine.is_captain.astype(bool)])
+    result["rivals"] = managers
+    return result.rename_axis("source_player_id").reset_index()
+
+
+def scorer_markets(
+    players: pd.DataFrame, fixtures: pd.DataFrame, gameweek: int | None = None
+) -> pd.DataFrame:
+    """Per player and fixture: probability of scoring and of assisting at least once.
+
+    Goals and assists are Poisson with the projected per-90 rate scaled by the fixture's
+    attack multiplier. Minutes are a three-way mixture (start, substitute, not used)
+    rather than one average, because the chance of scoring is not linear in minutes.
+    ``players`` is the output of :func:`project_players`.
+    """
+    required = {
+        "club_id",
+        "start_probability",
+        "appearance_probability",
+        "expected_minutes",
+        "projected_xg_per90",
+        "projected_xa_per90",
+    }
+    if not required <= set(players) or not {"club_id", "gameweek", "attack_multiplier"} <= set(
+        fixtures
+    ):
+        raise ValueError("Scorer-market inputs are incomplete")
+    week = int(fixtures.gameweek.min()) if gameweek is None else int(gameweek)
+    schedule = fixtures.loc[fixtures.gameweek.eq(week)]
+    keep = [
+        column
+        for column in (
+            "match_id",
+            "club_id",
+            "gameweek",
+            "opponent_short_name",
+            "venue",
+            "attack_multiplier",
+            "clean_sheet_probability",
+        )
+        if column in schedule
+    ]
+    frame = players.merge(schedule[keep], on="club_id", how="inner")
+    start = frame.start_probability.clip(0, 1)
+    substitute = (frame.appearance_probability - frame.start_probability).clip(0, 1)
+    substitute_minutes = np.minimum(SUBSTITUTE_MINUTES, frame.expected_minutes)
+    # Minutes when starting are whatever is left of the expectation after substitute cameos.
+    start_minutes = (
+        (frame.expected_minutes - substitute * substitute_minutes) / start.replace(0, np.nan)
+    ).clip(0, 90).fillna(0)
+    for name, rate in (("scorer", "projected_xg_per90"), ("assist", "projected_xa_per90")):
+        per_minute = frame[rate].clip(lower=0) * frame.attack_multiplier / 90
+        frame[f"{name}_probability"] = start * (
+            1 - np.exp(-per_minute * start_minutes)
+        ) + substitute * (1 - np.exp(-per_minute * substitute_minutes))
+        frame[f"expected_{name}_events"] = per_minute * frame.expected_minutes
+    return frame

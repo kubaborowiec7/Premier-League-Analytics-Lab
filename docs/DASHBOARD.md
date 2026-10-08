@@ -77,8 +77,10 @@ view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED
 Run `python scripts/refresh_current_data.py` for an immediate update. The supplied
 GitHub Actions workflow and Windows Task Scheduler installer automate this outside
 the web process. Streamlit never fits models or downloads datasets on a button click.
-The interactive data requests are the explicit public-team and mini-league lookups in
-FPL Decision Lab; they remain in session memory and send no credentials. The only file
+The interactive data requests are all explicit buttons in FPL Decision Lab: the
+public-team and mini-league lookups, the news update from the official player feed and
+the headline search for one player. They remain in session memory and send no
+credentials. The only file
 the app writes is the user's own bet log, `data/user/bets.csv` (see
 [BETTING_LAB.md](BETTING_LAB.md)). See
 [CURRENT_REFRESH.md](CURRENT_REFRESH.md).

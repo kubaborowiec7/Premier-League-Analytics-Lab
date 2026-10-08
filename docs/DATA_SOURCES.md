@@ -253,6 +253,24 @@ the team name; processed manager artifacts remain local and ignored by Git. Usag
 subject to Premier League terms. Future fixture rows come from the same commit-pinned
 FPL-Core-Insights files as current player profiles.
 
+## Interactive lookups in the FPL Decision Lab
+
+Three explicit buttons make live requests from wherever the app runs. None needs an
+account, none is archived, and the results stay in Streamlit session memory.
+
+- **Official FPL `bootstrap-static` feed** – one request for every player's current
+  status, news, chance of playing, price, ownership and transfers
+  (`data.fpl.fetch_live_players`). Subject to Premier League terms.
+- **Official FPL league standings and picks** – one page of a classic league and up to
+  20 public squads (`fetch_league_standings`, `fetch_league_picks`). Manager names are
+  discarded on read.
+- **Google News RSS search** (`https://news.google.com/rss/search`) – one request per
+  player lookup for recent headlines (`data.injury_news.fetch_headlines`). Only the title,
+  publisher, date and link are kept; article text is never fetched and nothing is
+  republished. It is a published feed, used on demand for personal reading; it is not an
+  API with stated terms for automated use, so lookups are one player at a time and never
+  scheduled.
+
 ## User-supplied comparison rows
 
 M18 permits manual or CSV player observations for interactive comparison. These rows

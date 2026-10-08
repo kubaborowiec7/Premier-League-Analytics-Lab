@@ -8,12 +8,15 @@ import pytest
 from pl_analytics.data.fpl import (
     fetch_league_picks,
     fetch_league_standings,
+    fetch_live_players,
     fetch_public_team,
     manager_summary,
     map_public_squad,
     model_goal_rates,
 )
 from pl_analytics.features.fpl import (
+    apply_availability,
+    attach_fit_projections,
     expected_minutes_features,
     fixture_rows,
     latest_players,
@@ -183,6 +186,120 @@ def test_fpl_projection_preserves_scope_and_fixture_horizons():
     upper = 1 - np.exp(-markets.expected_scorer_events)
     assert (markets.scorer_probability <= upper + 1e-12).all()
     assert (markets.scorer_probability <= markets.appearance_probability).all()
+
+
+def test_availability_overlay_reprices_only_the_players_that_change():
+    stats = pd.DataFrame(
+        [
+            {
+                "id": player,
+                "gw": gw,
+                "now_cost": 60,
+                "total_points": 20,
+                "event_points": 5,
+                "minutes": 360,
+                "starts": 4,
+                "expected_goals_per_90": 0.4,
+                "expected_assists_per_90": 0.2,
+                "selected_by_percent": 10.0,
+                "status": "i" if player == 2 else "a",
+                "chance_of_playing_next_round": 0 if player == 2 else None,
+            }
+            for player in (1, 2, 3)
+            for gw in (3, 4)
+        ]
+    )
+    identities = pd.DataFrame(
+        [
+            dict(player_id=p, player_code=100 + p, first_name="T", second_name=str(p),
+                 position="Forward", team_code=1)
+            for p in (1, 2, 3)
+        ]
+    )
+    teams = pd.DataFrame(
+        [dict(code=1, name="Alpha", short_name="ALP", elo=None),
+         dict(code=2, name="Beta", short_name="BET", elo=None)]
+    )
+    matches = pd.DataFrame(
+        [
+            dict(gameweek=gw, kickoff_time=f"2026-10-{gw:02d}T12:00:00Z", home_team=1,
+                 away_team=2, finished=False, match_id=f"m{gw}")
+            for gw in (5, 6, 7)
+        ]
+    )
+    players, history = latest_players(
+        stats, identities, teams, competition_id="TEST", season="2026/27",
+        position_map={"Forward": "FWD"},
+    )
+    fixtures = fixture_rows(matches, teams)
+    built = attach_fit_projections(
+        project_players(players, history, fixtures),
+        project_players(players.assign(status="a", chance_of_playing=100.0), history, fixtures),
+    ).set_index("source_player_id")
+    assert built.loc[2, "projected_points_1"] == 0 and built.loc[2, "fit_expected_minutes"] > 0
+    assert built.loc[1, "fit_projected_points_gw_5"] == pytest.approx(
+        built.loc[1, "projected_points_gw_5"]
+    )
+    untouched = apply_availability(built.reset_index()).set_index("source_player_id")
+    pd.testing.assert_series_equal(untouched.projected_points_3, built.projected_points_3)
+    assert untouched.availability_source.eq("build").all()
+
+    live = pd.DataFrame(
+        {
+            "source_player_id": [1, 2],
+            "status": ["d", "a"],
+            "news": ["Knock - 50% chance of playing", ""],
+            "chance_of_playing": [50.0, None],
+            "price": [6.1, 6.0],
+        }
+    )
+    updated = apply_availability(
+        built.reset_index(), live, overrides={3: 0.25}
+    ).set_index("source_player_id")
+    # Player 1 is now a doubt, player 2's flag has cleared, player 3 is set by hand.
+    assert updated.availability_probability.to_dict() == {1: 0.5, 2: 1.0, 3: 0.25}
+    assert updated.availability_source.to_dict() == {1: "news", 2: "news", 3: "manual"}
+    assert updated.loc[1, "price"] == 6.1 and updated.loc[1, "news"].startswith("Knock")
+    assert updated.loc[1, "projected_points_gw_5"] == pytest.approx(
+        0.5 * built.loc[1, "fit_projected_points_gw_5"]
+    )
+    # A player who was ruled out is revived from the fully-fit projection, not left at zero.
+    assert updated.loc[2, "projected_points_3"] == pytest.approx(
+        built.loc[2, [f"fit_projected_points_gw_{gw}" for gw in (5, 6, 7)]].sum()
+    )
+    assert updated.loc[2, "projected_points_3"] > 0 and updated.loc[2, "expected_minutes"] > 0
+    assert updated.loc[3, "projected_points_1"] == pytest.approx(
+        0.25 * built.loc[3, "fit_projected_points_gw_5"]
+    )
+    for horizon in (1, 2, 3):
+        points = updated[f"projected_points_{horizon}"]
+        assert (updated[f"projection_low_{horizon}"] <= points).all()
+        assert (points <= updated[f"projection_high_{horizon}"]).all()
+    with pytest.raises(ValueError):
+        apply_availability(built.reset_index(), overrides={1: 1.5})
+
+
+def test_live_player_feed_maps_the_public_fields():
+    payload = {
+        "elements": [
+            dict(id=7, status="d", news="Knock", chance_of_playing_next_round=75, now_cost=61,
+                 selected_by_percent="12.5", transfers_in_event=900, transfers_out_event=100),
+            dict(id=8, status="a", news="", chance_of_playing_next_round=None, now_cost=45,
+                 selected_by_percent="0.4", transfers_in_event=0, transfers_out_event=10),
+        ]
+    }
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
+    ) as client:
+        live = fetch_live_players(client).set_index("source_player_id")
+    assert live.loc[7, ["status", "chance_of_playing", "price", "ownership_pct"]].tolist() == [
+        "d", 75.0, 6.1, 12.5,
+    ]
+    assert live.loc[7, "net_transfers_event"] == 800 and pd.isna(live.loc[8, "chance_of_playing"])
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"elements": []}))
+    ) as client, pytest.raises(ValueError):
+        fetch_live_players(client)
 
 
 def _season_matches() -> pd.DataFrame:

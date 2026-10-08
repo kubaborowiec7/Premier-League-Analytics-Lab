@@ -9,6 +9,7 @@ import pandas as pd
 
 from pl_analytics.data.snapshots import Snapshot, SnapshotStore
 from pl_analytics.features.fpl import (
+    attach_fit_projections,
     fixture_rows,
     latest_players,
     league_table,
@@ -21,6 +22,7 @@ from pl_analytics.features.fpl_optimizer import backtest_summary, rolling_backte
 from pl_analytics.statistics.season import simulate_season
 
 MAX_LEAGUE_TEAMS = 21
+BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
 
 _ALIASES = {
     "spurs": "tottenham",
@@ -122,6 +124,38 @@ def _get_json(client: httpx.Client, url: str) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("The public FPL response has an invalid format")
     return payload
+
+
+def fetch_live_players(client: httpx.Client | None = None) -> pd.DataFrame:
+    """Current status, news, price and ownership for every player from the official feed.
+
+    One public request, no credentials. Used for an explicit in-app update between
+    full data refreshes; nothing is written to disk.
+    """
+    if client is None:
+        with httpx.Client(timeout=20, follow_redirects=True) as owned:
+            return fetch_live_players(owned)
+    elements = pd.DataFrame(_get_json(client, BOOTSTRAP_URL).get("elements", []))
+    required = {"id", "status", "news", "chance_of_playing_next_round", "now_cost"}
+    if elements.empty or not required <= set(elements) or elements.id.duplicated().any():
+        raise ValueError("The public FPL player feed is missing or ambiguous")
+
+    def numeric(column: str) -> pd.Series:
+        return pd.to_numeric(
+            elements.get(column, pd.Series(float("nan"), index=elements.index)), errors="coerce"
+        )
+
+    return pd.DataFrame(
+        {
+            "source_player_id": elements.id.astype(int),
+            "status": elements.status.fillna("a").astype(str),
+            "news": elements.news.fillna("").astype(str),
+            "chance_of_playing": numeric("chance_of_playing_next_round"),
+            "price": numeric("now_cost") / 10,
+            "ownership_pct": numeric("selected_by_percent"),
+            "net_transfers_event": numeric("transfers_in_event") - numeric("transfers_out_event"),
+        }
+    )
 
 
 def fetch_league_standings(
@@ -363,6 +397,18 @@ def build_fpl_artifacts(
     )
     projections = project_players(
         players, history, fixtures, appearances=appearances, priors=priors
+    )
+    # The same projection with every availability flag cleared, so the dashboard can
+    # re-price a player when the news changes without refitting.
+    projections = attach_fit_projections(
+        projections,
+        project_players(
+            players.assign(status="a", chance_of_playing=100.0),
+            history,
+            fixtures,
+            appearances=appearances,
+            priors=priors,
+        ),
     )
     backtest = rolling_backtest(
         playerstats,

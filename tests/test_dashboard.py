@@ -245,6 +245,8 @@ def test_fpl_lab_and_backtest_render_from_synthetic_artifacts(isolated):
         "Players",
         "Fixtures",
         "My team & transfers",
+        "Injury news",
+        "Template",
         "Mini-league",
     ]
     rendered = " ".join(item.value for item in app.markdown)

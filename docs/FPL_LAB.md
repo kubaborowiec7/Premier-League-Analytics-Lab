@@ -15,7 +15,57 @@ tabs:
 - **Mini-league** – compare the loaded squad with rivals in one of its private classic
   leagues: differentials, players most rivals own, and rivals' captains.
 
+- **Injury news** – look up recent headlines for one player and optionally set the
+  chance of playing used on the page.
+- **Template** – the most-owned legal squad, compared with the loaded squad.
+
 The rolling backtest lives in **Model Lab → FPL expected points**.
+
+### Updating news between refreshes
+
+**Update news** under the header reads the official `bootstrap-static` feed once
+(`data.fpl.fetch_live_players`) and overlays each player's status, news, chance of
+playing, price, ownership and net transfers for the session. Nothing is written to disk
+and player form and fixtures stay as built by the last full refresh.
+
+A player whose availability changes is re-priced by `features.fpl.apply_availability`:
+the build stores every player's fully-fit projection as `fit_*` columns, and the new
+minutes and points are that projection times the new availability. This is linear, so it
+differs slightly from a full rebuild (clean-sheet, save and defensive-contribution points
+are not linear in minutes); unchanged players keep their built numbers exactly. One
+availability still applies to every gameweek in the horizon.
+
+### Injury news
+
+**Search the news** sends one request to the public Google News RSS search feed
+(`data.injury_news`) for the player and club and keeps the last ten days of headlines:
+title, publisher, date and link, in session memory only. Article text is not fetched and
+social networks are not searched (they offer no free feed).
+
+`features.injury_news` reads the headlines that name the player with fixed phrases:
+"ruled out", "suspended" and similar count as 3%, "doubt", "fitness test" as 50%, and
+"returns to training", "passed fit", "boost" as 90%. Headlines that cover several players
+(two or more commas, or phrases such as "injury update" and "team news") are listed but
+never read as a signal. The estimate is the average of the signals, weighted towards the
+newest with a two-day half-life. **This is a rule-based reading, not a model, and it has
+not been validated against who actually played.** It is shown beside the game's own flag
+and never applied automatically; the user sets the chance to use with a slider, which
+re-prices the player for the session.
+
+### Template
+
+The template is the squad that maximises total ownership subject to the game's rules
+(2/5/5/3, at most three per club, £100m at current prices), found by the same integer
+programme as the optimizer. The tab shows it on a pitch with ownership per player, its
+projected XI points, how many of its players the loaded squad shares, and the players on
+each side that the other lacks. It describes what most managers hold, not what to buy.
+
+### One gameweek at a time
+
+On **My team & transfers**, "Show projections for" switches the pitch from the planning
+horizon to a single gameweek: the best XI, captain, fixtures and points for that week
+alone. A table underneath lists every squad player's points and fixture for each of the
+five prepared gameweeks.
 
 ### Price watch
 

@@ -964,3 +964,116 @@ def scorer_markets(
         ) + substitute * (1 - np.exp(-per_minute * substitute_minutes))
         frame[f"expected_{name}_events"] = per_minute * frame.expected_minutes
     return frame
+
+
+FIT_PREFIX = "fit_"
+MINUTE_COLUMNS = (
+    "start_probability",
+    "appearance_probability",
+    "sixty_probability",
+    "expected_minutes",
+)
+
+
+def _gameweek_columns(frame: pd.DataFrame) -> list[str]:
+    """Per-gameweek projection columns, earliest gameweek first."""
+    prefix = "projected_points_gw_"
+    return sorted(
+        (column for column in frame if column.startswith(prefix)),
+        key=lambda column: int(column.removeprefix(prefix)),
+    )
+
+
+def attach_fit_projections(projected: pd.DataFrame, fit: pd.DataFrame) -> pd.DataFrame:
+    """Store what each player would project if fully available, as ``fit_*`` columns.
+
+    ``fit`` is :func:`project_players` run on the same players with every availability
+    flag cleared. Keeping it lets the dashboard re-price a player when the news changes
+    without refitting anything.
+    """
+    columns = [
+        *_gameweek_columns(fit),
+        *MINUTE_COLUMNS,
+        *(column for column in fit if column.startswith("xpts_")),
+    ]
+    extra = fit.set_index("source_player_id")[columns].add_prefix(FIT_PREFIX)
+    return projected.merge(
+        extra, left_on="source_player_id", right_index=True, how="left", validate="one_to_one"
+    )
+
+
+def apply_availability(
+    players: pd.DataFrame,
+    live: pd.DataFrame | None = None,
+    overrides: dict[int, float] | None = None,
+) -> pd.DataFrame:
+    """Overlay newer news and manual availability, re-pricing only the players that change.
+
+    ``live`` carries current ``status``, ``news``, ``chance_of_playing``, ``price``,
+    ``ownership_pct`` and ``net_transfers_event`` by ``source_player_id``; ``overrides``
+    maps a player to a chance of playing in [0, 1] and wins over both. A changed player's
+    minutes and points become the stored fully-fit projection times the new availability.
+    That is linear, so it differs slightly from a full rebuild, which is not linear in
+    minutes. Unchanged players keep their built numbers exactly. As in the build, one
+    availability applies to every gameweek in the horizon.
+    """
+    result = players.copy()
+    identities = result.source_player_id.astype(int)
+    result["availability_source"] = "build"
+    if live is not None and not live.empty:
+        fresh = live.drop_duplicates("source_player_id").set_index("source_player_id")
+        known = identities.isin(fresh.index)
+        for column in (
+            "status",
+            "news",
+            "chance_of_playing",
+            "price",
+            "ownership_pct",
+            "net_transfers_event",
+        ):
+            if column in fresh and column in result:
+                # A cleared flag arrives as a missing chance, so missing values overwrite too.
+                result.loc[known, column] = identities.map(fresh[column])[known]
+    # The same rule as _availability, vectorised: this runs on every page render.
+    chance = pd.to_numeric(result.chance_of_playing, errors="coerce")
+    by_status = result.status.map({"a": 1.0, "d": 0.5}).fillna(0.0)
+    availability = (chance / 100).clip(0, 1).fillna(by_status).astype(float)
+    built = result.availability_probability.astype(float)
+    result.loc[(availability - built).abs() > 1e-9, "availability_source"] = "news"
+    if overrides:
+        manual = identities.map({int(key): float(value) for key, value in overrides.items()})
+        if ((manual < 0) | (manual > 1)).any():
+            raise ValueError("Availability overrides must lie in [0, 1]")
+        result.loc[manual.notna(), "availability_source"] = "manual"
+        availability = manual.fillna(availability)
+    changed = (availability - built).abs() > 1e-9
+    result["availability_probability"] = availability
+    if not changed.any():
+        return result
+    weeks = _gameweek_columns(result)
+    scaled = [*weeks, *MINUTE_COLUMNS, *(c for c in result if c.startswith("xpts_"))]
+    if all(f"{FIT_PREFIX}{column}" in result for column in scaled):
+        for column in scaled:
+            result.loc[changed, column] = (
+                result.loc[changed, f"{FIT_PREFIX}{column}"] * availability[changed]
+            )
+    else:
+        # Older artifacts have no fully-fit projection: rescale, which cannot revive a zero.
+        ratio = (availability / built.where(built > 0)).fillna(0.0)
+        for column in scaled:
+            result.loc[changed, column] = result.loc[changed, column] * ratio[changed]
+    for horizon in range(1, len(weeks) + 1):
+        if f"projected_points_{horizon}" not in result:
+            continue
+        points = result.loc[changed, weeks[:horizon]].sum(axis=1)
+        spread = (
+            1.28
+            * result.loc[changed, "historical_points_sd"]
+            * result.loc[changed, "expected_minutes"]
+            / 90
+            * np.sqrt(horizon)
+        )
+        result.loc[changed, f"projected_points_{horizon}"] = points
+        result.loc[changed, f"projection_low_{horizon}"] = np.maximum(0, points - spread)
+        result.loc[changed, f"projection_high_{horizon}"] = points + spread
+    return result

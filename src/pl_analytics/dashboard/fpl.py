@@ -6,6 +6,7 @@ in the header drives every tab. Nothing is fitted here; the only network call is
 explicit public-team lookup.
 """
 
+from datetime import UTC, datetime
 from html import escape
 
 import pandas as pd
@@ -19,11 +20,13 @@ from pl_analytics.data.fpl import (
     MAX_LEAGUE_TEAMS,
     fetch_league_picks,
     fetch_league_standings,
+    fetch_live_players,
     fetch_public_team,
     manager_summary,
     map_public_squad,
 )
-from pl_analytics.features.fpl import league_ownership, price_watch
+from pl_analytics.data.injury_news import fetch_headlines
+from pl_analytics.features.fpl import apply_availability, league_ownership, price_watch
 from pl_analytics.features.fpl_optimizer import (
     best_single_transfers,
     optimize_chip_schedule,
@@ -32,10 +35,12 @@ from pl_analytics.features.fpl_optimizer import (
     replacement_options,
     select_starting_xi,
 )
+from pl_analytics.features.injury_news import estimate_availability
 
 UK = "Europe/London"
 DEADLINE_LEAD = pd.Timedelta(minutes=90)
 POSITIONS = ("GK", "DEF", "MID", "FWD")
+TEMPLATE_BUDGET = 100.0  # the game's starting budget, in £m
 DIFFICULTY_VIEWS = {
     "Overall": "difficulty",
     "Attack": "attack_difficulty",
@@ -300,6 +305,28 @@ def _availability(players: pd.DataFrame, squad: pd.DataFrame | None) -> str:
     return "".join(rows)
 
 
+TRANSFER_COLUMNS = ["source_player_id", "position_group", "club_id", "price", "expected_minutes"]
+
+
+@st.cache_data(show_spinner=False, max_entries=32)
+def _cached_transfers(
+    squad: pd.DataFrame, players: pd.DataFrame, projection: str, bank: float
+) -> pd.DataFrame:
+    return best_single_transfers(squad, players, projection=projection, bank=bank)
+
+
+def _ranked_transfers(
+    squad: pd.DataFrame, players: pd.DataFrame, projection: str, bank: float
+) -> pd.DataFrame:
+    """Best swap per squad player, cached on just the columns the search reads.
+
+    Two tabs need this ranking and every widget change reruns the page, so without the
+    cache the same search runs several times per interaction.
+    """
+    columns = [*TRANSFER_COLUMNS, projection]
+    return _cached_transfers(squad[columns], players[columns], projection, float(bank))
+
+
 def _squad_summary(
     players: pd.DataFrame,
     squad: pd.DataFrame,
@@ -322,9 +349,7 @@ def _squad_summary(
         f'<span class="big">{captain.projected_points_1:.1f}</span></div>',
     ]
     projection = f"projected_points_{horizon}"
-    transfers = best_single_transfers(
-        squad, players, projection=projection, bank=(manager.get("bank") or 0) / 10
-    )
+    transfers = _ranked_transfers(squad, players, projection, (manager.get("bank") or 0) / 10)
     if not transfers.empty and transfers.lineup_gain.iloc[0] > 0.05:
         best = transfers.iloc[0]
         lookup = players.set_index("source_player_id")
@@ -679,27 +704,51 @@ def _ticker(fixtures: pd.DataFrame) -> None:
 # ---------------------------------------------------------------- my team & transfers
 
 
-def _tile(row: object, schedule: dict, next_gw: int, projection: str, captain: bool) -> str:
+def _tile(
+    row: object,
+    schedule: dict,
+    fixture_gw: int,
+    column: str,
+    captain: bool,
+    template: str = "{:.1f}",
+) -> str:
     doubt = " doubt" if str(getattr(row, "status", "a")) != "a" else ""
-    badge = '<span class="cap" title="Recommended captain">C</span>' if captain else ""
+    badge = '<span class="cap" title="Captain">C</span>' if captain else ""
     return (
         f'<div class="pl-tile{doubt}">{badge}{theme.club_chip(row.club_short_name)}'
         f'<span class="nm">{escape(_name(row))}</span>'
-        f'<span class="fx">{escape(_fixture_text(schedule, row.club_id, next_gw))}</span>'
-        f'<span class="pts">{getattr(row, projection):.1f}</span></div>'
+        f'<span class="fx">{escape(_fixture_text(schedule, row.club_id, fixture_gw))}</span>'
+        f'<span class="pts">{template.format(getattr(row, column))}</span></div>'
     )
 
 
-def _pitch(squad: pd.DataFrame, schedule: dict, horizon: int, next_gw: int) -> None:
-    projection = f"projected_points_{horizon}"
+def _pitch(
+    squad: pd.DataFrame,
+    schedule: dict,
+    *,
+    projection: str,
+    fixture_gw: int,
+    note: str,
+    title: str = "Recommended XI",
+    shown: str | None = None,
+    template: str = "{:.1f}",
+    captain: bool = True,
+) -> None:
+    """Draw the best legal XI by ``projection``; tiles show ``shown`` (default: the same)."""
+    shown = shown or projection
     lineup = select_starting_xi(squad, projection)
     starters = lineup.loc[lineup.is_starter]
-    captain = starters.loc[starters.is_recommended_captain].iloc[0]
-    total = starters[projection].sum() + captain[projection]
     lines = "".join(
         '<div class="line">'
         + "".join(
-            _tile(row, schedule, next_gw, projection, bool(row.is_recommended_captain))
+            _tile(
+                row,
+                schedule,
+                fixture_gw,
+                shown,
+                captain and bool(row.is_recommended_captain),
+                template,
+            )
             for row in starters.loc[starters.position_group.eq(position)]
             .sort_values(projection, ascending=False)
             .itertuples(index=False)
@@ -711,26 +760,107 @@ def _pitch(squad: pd.DataFrame, schedule: dict, horizon: int, next_gw: int) -> N
         keeper=lambda frame: frame.position_group.ne("GK")
     )
     bench_tiles = "".join(
-        _tile(row, schedule, next_gw, projection, False)
+        _tile(row, schedule, fixture_gw, shown, False, template)
         for row in bench.sort_values(["keeper", projection], ascending=[True, False]).itertuples(
             index=False
         )
     )
     shape = starters.position_group.value_counts()
-    title = (
-        f"Recommended XI · {shape.get('DEF', 0)}-{shape.get('MID', 0)}-{shape.get('FWD', 0)}"
-    )
     body = (
-        f'<div class="pl-muted" style="margin:-6px 0 12px">{total:.1f} expected points over the '
-        f"{_horizon_label(horizon)}, captain counted twice. Each tile shows the gameweek "
-        f"{next_gw} fixture.</div>"
+        f'<div class="pl-muted" style="margin:-6px 0 12px">{note}</div>'
         f'<div class="pl-pitch">{lines}</div>'
         f'<div class="pl-eyebrow" style="margin-top:14px">Bench</div>'
         f'<div class="pl-bench">{bench_tiles}</div>'
         '<div class="pl-muted" style="margin-top:10px">An amber outline marks a player with an '
         "injury or availability flag.</div>"
     )
-    st.markdown(theme.card(title, body), unsafe_allow_html=True)
+    st.markdown(
+        theme.card(
+            f"{title} · {shape.get('DEF', 0)}-{shape.get('MID', 0)}-{shape.get('FWD', 0)}", body
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _xi_total(squad: pd.DataFrame, projection: str) -> float:
+    lineup = select_starting_xi(squad, projection)
+    starters = lineup.loc[lineup.is_starter]
+    return float(
+        starters[projection].sum()
+        + starters.loc[starters.is_recommended_captain, projection].iloc[0]
+    )
+
+
+def _squad_pitch(squad: pd.DataFrame, schedule: dict, horizon: int, gameweeks: list[int]) -> None:
+    """The pitch for the planning horizon or for one chosen gameweek, plus a week-by-week table."""
+    weeks = [week for week in gameweeks if f"projected_points_gw_{week}" in squad]
+    choice = st.segmented_control(
+        "Show projections for",
+        ["horizon", *weeks],
+        default="horizon",
+        format_func=lambda value: (
+            f"Next {horizon} GW total" if value == "horizon" and horizon > 1
+            else "Next GW" if value == "horizon"
+            else f"GW{value}"
+        ),
+        key="fpl-pitch-view",
+        help="Pick one gameweek to see the best XI, fixtures and points for that week alone.",
+    )
+    if choice in weeks:
+        projection, fixture_gw = f"projected_points_gw_{choice}", int(choice)
+        note = (
+            f"{_xi_total(squad, projection):.1f} expected points in gameweek {choice}, captain "
+            "counted twice. The XI and captain are chosen for that gameweek alone."
+        )
+    else:
+        projection, fixture_gw = f"projected_points_{horizon}", gameweeks[0]
+        note = (
+            f"{_xi_total(squad, projection):.1f} expected points over the "
+            f"{_horizon_label(horizon)}, captain counted twice. Each tile shows the gameweek "
+            f"{fixture_gw} fixture."
+        )
+    _pitch(squad, schedule, projection=projection, fixture_gw=fixture_gw, note=note)
+    if not weeks:
+        return
+    order = {position: index for index, position in enumerate(POSITIONS)}
+    ordered = squad.assign(
+        line=squad.position_group.map(order),
+        weeks_total=squad[[f"projected_points_gw_{week}" for week in weeks]].sum(axis=1),
+    ).sort_values(["line", "weeks_total"], ascending=[True, False])
+    table = pd.DataFrame(
+        {
+            "Player": [_name(row) for row in ordered.itertuples(index=False)],
+            "Pos": ordered.position_group.to_numpy(),
+            **{
+                f"GW{week}": [
+                    f"{points:.1f} · {_fixture_text(schedule, club, week)}"
+                    for points, club in zip(
+                        ordered[f"projected_points_gw_{week}"], ordered.club_id, strict=True
+                    )
+                ]
+                for week in weeks
+            },
+            "Total": ordered[[f"projected_points_gw_{week}" for week in weeks]].sum(axis=1),
+        }
+    )
+    st.markdown(
+        '<div class="pl-eyebrow" style="margin:4px 0 6px">Week by week · points and fixture'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.dataframe(
+        table,
+        hide_index=True,
+        width="stretch",
+        height=38 * (len(table) + 1),
+        column_config={"Total": st.column_config.NumberColumn(format="%.1f")},
+    )
+    best = {week: _xi_total(squad, f"projected_points_gw_{week}") for week in weeks}
+    st.caption(
+        "Best XI by gameweek, captain counted twice: "
+        + " · ".join(f"GW{week} {points:.1f}" for week, points in best.items())
+        + "."
+    )
 
 
 def _head_to_head(outgoing: pd.Series, incoming: pd.Series, projection: str) -> str:
@@ -775,7 +905,7 @@ def _planner(
     with st.container(border=True):
         st.markdown('<div class="pl-card-title">Transfer planner</div>', unsafe_allow_html=True)
         if squad is not None:
-            ranked = best_single_transfers(squad, players, projection=projection, bank=default_bank)
+            ranked = _ranked_transfers(squad, players, projection, default_bank)
             ordered = list(dict.fromkeys(ranked.out_id.tolist()))
             ordered += [
                 int(value) for value in squad.source_player_id if int(value) not in ordered
@@ -1211,6 +1341,329 @@ def _mini_league(
         )
 
 
+@st.cache_data(show_spinner=False)
+def _template_ids(pool: pd.DataFrame, budget: float) -> list[int]:
+    """The most-owned legal squad; cached because it solves an integer programme."""
+    squad = optimize_squad(pool, budget=budget, projection="ownership_pct")
+    return squad.source_player_id.astype(int).tolist()
+
+
+def _template(
+    players: pd.DataFrame,
+    schedule: dict[str, pd.DataFrame],
+    squad: pd.DataFrame | None,
+    gameweeks: list[int],
+) -> None:
+    """The template: the most-owned squad that fits the game's rules and budget."""
+    pool = players.loc[players.ownership_pct.notna() & players.price.notna()]
+    if len(pool) < 15:
+        st.info("Ownership figures are not in the current data.")
+        return
+    try:
+        ids = _template_ids(
+            pool[["source_player_id", "position_group", "club_id", "price", "ownership_pct"]],
+            TEMPLATE_BUDGET,
+        )
+    except ValueError:
+        st.info("No legal template squad could be built from the current data.")
+        return
+    template = players.loc[players.source_player_id.isin(ids)]
+    next_gw = gameweeks[0]
+    left, right = st.columns([3, 2], gap="medium")
+    with left:
+        _pitch(
+            template,
+            schedule,
+            projection="ownership_pct",
+            fixture_gw=next_gw,
+            note=(
+                f"The 15 most-owned players that fit a legal squad within £{TEMPLATE_BUDGET:.0f}m "
+                f"at current prices (cost {_money(template.price.sum())}). Each tile shows the "
+                f"share of all managers who own the player and the gameweek {next_gw} fixture."
+            ),
+            title="Template team",
+            template="{:.0f}%",
+            captain=False,
+        )
+    with right:
+        cards = [
+            (
+                "Template XI points",
+                f"{_xi_total(template, 'projected_points_1'):.1f}",
+                f"Model projection for gameweek {next_gw}, best captain",
+            )
+        ]
+        if squad is not None:
+            owned = set(squad.source_player_id.astype(int))
+            shared = template.source_player_id.astype(int).isin(owned)
+            cards = [
+                ("Template players you own", f"{int(shared.sum())} of 15", "Same player, any role"),
+                *cards,
+                (
+                    "Your XI points",
+                    f"{_xi_total(squad, 'projected_points_1'):.1f}",
+                    f"Model projection for gameweek {next_gw}",
+                ),
+            ]
+        theme.stat_row(cards)
+
+        def rows(frame: pd.DataFrame) -> str:
+            if frame.empty:
+                return '<span class="pl-muted">None.</span>'
+            return "".join(
+                '<div class="pl-list-row">'
+                f"{theme.club_chip(row.club_short_name)}"
+                f'<span class="grow"><b>{escape(_name(row))}</b>'
+                f'<span class="pl-muted">{row.position_group} · {_money(row.price)} · '
+                f"{row.projected_points_1:.1f} xPts next gameweek</span></span>"
+                f'<span class="big">{row.ownership_pct:.0f}%</span></div>'
+                for row in frame.sort_values("ownership_pct", ascending=False).itertuples(
+                    index=False
+                )
+            )
+
+        if squad is None:
+            st.markdown(
+                theme.card("Most owned", rows(template.nlargest(8, "ownership_pct"))),
+                unsafe_allow_html=True,
+            )
+            st.caption("Load your team to see which template players you are missing.")
+        else:
+            st.markdown(
+                theme.card("In the template, not in your squad", rows(template.loc[~shared])),
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                theme.card(
+                    "In your squad, not in the template",
+                    rows(squad.loc[~squad.source_player_id.astype(int).isin(ids)]),
+                ),
+                unsafe_allow_html=True,
+            )
+    st.caption(
+        "The template is built from ownership alone: it is what most managers hold, not a "
+        "recommendation. Matching it protects your rank when popular players score; players "
+        "outside it are where you gain or lose ground. Percentages are overall ownership."
+    )
+
+
+def _news_names(row: object) -> tuple[str, ...]:
+    """Names a headline might use for the player: short name, surname, full name."""
+    surname = str(getattr(row, "second_name", "") or "").strip()
+    return tuple(
+        dict.fromkeys(
+            name
+            for name in (
+                _name(row),
+                surname,
+                surname.split()[-1] if surname else "",
+                str(row.player_name),
+            )
+            if name
+        )
+    )
+
+
+def _flag_text(row: object) -> tuple[str, str]:
+    """The game's own availability flag as (value, detail)."""
+    chance = getattr(row, "chance_of_playing", float("nan"))
+    news = str(getattr(row, "news", "") or "")
+    if pd.notna(chance):
+        return f"{chance:.0f}%", news or "Flagged by the game"
+    if str(getattr(row, "status", "a")) == "a":
+        return "No flag", "Listed as available"
+    return "Flagged", news or "No chance of playing published"
+
+
+def _injury_news(players: pd.DataFrame, squad: pd.DataFrame | None) -> None:
+    """Look up recent headlines for one player and optionally set the chance used here."""
+    overrides: dict = st.session_state.setdefault("fpl_overrides", {})
+    lookups: dict = st.session_state.setdefault("fpl_news", {})
+    owned = set() if squad is None else set(squad.source_player_id.astype(int))
+    ranked = players.assign(
+        mine=players.source_player_id.astype(int).isin(owned),
+        flagged=players.status.ne("a") | players.chance_of_playing.lt(100),
+    ).sort_values(
+        ["mine", "flagged", "ownership_pct", "player_name"], ascending=[False, False, False, True]
+    )
+    lookup = ranked.set_index(ranked.source_player_id.astype(int))
+
+    def label(player_id: int) -> str:
+        row = lookup.loc[player_id]
+        tags = [tag for tag, on in (("your squad", row.mine), ("flagged", row.flagged)) if on]
+        return f"{row.player_name} · {row.club_short_name}" + (
+            f" · {', '.join(tags)}" if tags else ""
+        )
+
+    first, second = st.columns([3, 1], vertical_alignment="bottom")
+    player_id = first.selectbox(
+        "Player",
+        lookup.index.tolist(),
+        format_func=label,
+        key="fpl-news-player",
+        help="Your squad and flagged players are listed first.",
+    )
+    row = lookup.loc[player_id]
+    if second.button("Search the news", type="primary", width="stretch", key="fpl-news-search"):
+        try:
+            headlines = fetch_headlines(_name(row), str(row.club_name))
+        except ValueError as error:
+            st.error(f"{error}. Try again in a moment.")
+        else:
+            lookups[player_id] = {"at": datetime.now(UTC), "headlines": headlines}
+    found = lookups.get(player_id)
+    flag, flag_detail = _flag_text(row)
+    reading = (
+        estimate_availability(found["headlines"], _news_names(row), now=found["at"])
+        if found
+        else None
+    )
+    if reading is None:
+        news_value, news_detail = "Not searched", "Press Search the news"
+    elif reading["estimate"] is None:
+        news_value, news_detail = "No clear signal", "No headline names the player with a signal"
+    else:
+        news_value = f"{reading['estimate']:.0%}"
+        news_detail = (
+            "From 1 headline · weak evidence"
+            if reading["signals"] == 1
+            else f"From {reading['signals']} headlines"
+            + (" · reports disagree" if reading["mixed"] else "")
+        )
+    source = {"build": "the game's flag", "news": "the game's updated flag", "manual": "set by you"}
+    theme.stat_row(
+        (
+            ("The game says", flag, flag_detail),
+            ("Headlines suggest", news_value, news_detail),
+            (
+                "Used in projections",
+                f"{row.availability_probability:.0%}",
+                f"Chance of playing, {source.get(row.availability_source, 'the game flag')}",
+            ),
+        )
+    )
+    if reading is not None:
+        relevant = [item for item in reading["headlines"] if item["relevant"]]
+        tones = {"Out": "bad", "Doubt": "warning", "Positive": "good"}
+        if relevant:
+            items = "".join(
+                '<div class="pl-list-row">'
+                f'<span class="grow"><a href="{escape(item["link"], quote=True)}" target="_blank" '
+                f'rel="noopener noreferrer" style="color:{theme.TEXT};font-weight:600;'
+                f'text-decoration:none">{escape(item["title"])}</a>'
+                f'<span class="pl-muted">{escape(item["source"])} · '
+                f'{item["published"]:%a %d %b, %H:%M} UTC</span></span>'
+                + (
+                    theme.badge(item["label"], tones[item["label"]])
+                    if item["label"] in tones
+                    else '<span class="pl-muted" style="white-space:nowrap">'
+                    f"{'round-up' if item['label'] == 'Round-up' else 'no signal'}</span>"
+                )
+                + "</div>"
+                for item in relevant[:12]
+            )
+        else:
+            items = '<span class="pl-muted">No recent headline names this player.</span>'
+        st.markdown(
+            theme.card(f"Headlines naming {_name(row)} · last 10 days", items),
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"Searched {found['at']:%H:%M} UTC, {len(found['headlines'])} headlines returned, "
+            f"{len(relevant)} naming the player. The estimate is a simple reading of headline "
+            "wording, weighted towards the newest, and has not been tested against results. "
+            "Round-ups covering several players are listed but not read as a signal. Open "
+            "the sources before relying on it. Social networks are not searched."
+        )
+    with st.container(border=True):
+        st.markdown(
+            '<div class="pl-card-title">Set the chance of playing yourself</div>',
+            unsafe_allow_html=True,
+        )
+        suggestion = (
+            reading["estimate"]
+            if reading is not None and reading["estimate"] is not None
+            else float(row.availability_probability)
+        )
+        left, middle, right = st.columns([3, 1, 1], vertical_alignment="bottom")
+        chosen = left.slider(
+            f"Chance that {_name(row)} plays (%)",
+            0,
+            100,
+            int(round(suggestion * 20) * 5),
+            5,
+            # A separate key once headlines are read, so the slider restarts at the estimate.
+            key=f"fpl-news-chance-{player_id}-{'news' if reading is not None else 'flag'}",
+        )
+        if middle.button("Apply", width="stretch", key="fpl-news-apply"):
+            overrides[int(player_id)] = chosen / 100
+            st.rerun()
+        if right.button(
+            "Reset",
+            width="stretch",
+            key="fpl-news-reset",
+            disabled=int(player_id) not in overrides,
+        ):
+            overrides.pop(int(player_id), None)
+            st.rerun()
+        st.caption(
+            "Applying re-prices this player everywhere on this page (picks, pitch, transfers) "
+            "for this session only. As in the model, one chance applies to every gameweek in "
+            "the horizon."
+        )
+        if overrides:
+            names = players.set_index(players.source_player_id.astype(int)).player_name
+            listed = ", ".join(
+                f"{names.get(key, key)} {value:.0%}" for key, value in overrides.items()
+            )
+            st.markdown(
+                f'<div class="pl-muted">Set by you: {escape(listed)}</div>', unsafe_allow_html=True
+            )
+            if st.button("Clear all my settings", key="fpl-news-clear"):
+                overrides.clear()
+                st.rerun()
+
+
+def _news_bar(metadata: dict) -> None:
+    """When the injury news was last read, and a button to read it again."""
+    live = st.session_state.get("fpl_live")
+    left, right = st.columns([5, 2], vertical_alignment="center")
+    if live:
+        text = (
+            f"Injury news, prices and ownership updated {live['at']:%a %d %b, %H:%M} UTC from "
+            "the official game feed. Player form and fixtures are from the last full refresh."
+        )
+    else:
+        text = (
+            f"Injury news, prices and ownership are from the last full refresh "
+            f"({metadata.get('reference_date', 'date unknown')}). Update them here at any time."
+        )
+    left.markdown(f'<div class="pl-muted">{text}</div>', unsafe_allow_html=True)
+    if right.button("Update news", width="stretch", key="fpl-live-refresh"):
+        try:
+            frame = fetch_live_players()
+        except ValueError as error:
+            st.error(f"{error}. Try again in a moment.")
+        else:
+            st.session_state["fpl_live"] = {"frame": frame, "at": datetime.now(UTC)}
+            st.rerun()
+
+
+def _current_squad(squad: pd.DataFrame, players: pd.DataFrame) -> pd.DataFrame:
+    """Rebuild the squad rows from the current player table so updates reach the pitch."""
+    picks = [
+        column
+        for column in ("element", "squad_position", "multiplier", "is_captain", "is_vice_captain")
+        if column in squad
+    ]
+    if "element" not in picks:
+        return squad
+    rebuilt = squad[picks].merge(
+        players, left_on="element", right_on="source_player_id", validate="one_to_one"
+    )
+    return rebuilt if len(rebuilt) == len(squad) else squad
+
+
 def _my_team(
     players: pd.DataFrame,
     schedule: dict[str, pd.DataFrame],
@@ -1228,7 +1681,7 @@ def _my_team(
         return
     left, right = st.columns([3, 2], gap="medium")
     with left:
-        _pitch(squad, schedule, horizon, gameweeks[0])
+        _squad_pitch(squad, schedule, horizon, gameweeks)
     with right:
         _planner(players, schedule, squad, manager, horizon, gameweeks)
     _plan(players, squad, manager)
@@ -1324,14 +1777,34 @@ def render_backtest(settings: Settings) -> None:
 def render_fpl(settings: Settings, competition: str) -> None:
     """Render FPL planning tools from refresh-time artifacts only."""
     players, fixtures, metadata = _load(settings, competition)
+    # Newer news read in this session and the user's own chances re-price players here.
+    live = st.session_state.get("fpl_live")
+    players = apply_availability(
+        players, live["frame"] if live else None, st.session_state.get("fpl_overrides")
+    )
     squad, manager = _team_state(settings, metadata)
+    if squad is not None:
+        squad = _current_squad(squad, players)
     horizon = _header(settings, players, fixtures, metadata, squad, manager)
+    _news_bar(metadata)
     schedule = _schedule(fixtures)
     gameweeks = sorted(int(value) for value in fixtures.gameweek.unique())
     tabs = st.tabs(
-        ["This gameweek", "Players", "Fixtures", "My team & transfers", "Mini-league"]
+        [
+            "This gameweek",
+            "Players",
+            "Fixtures",
+            "My team & transfers",
+            "Injury news",
+            "Template",
+            "Mini-league",
+        ]
     )
     with tabs[4]:
+        _injury_news(players, squad)
+    with tabs[5]:
+        _template(players, schedule, squad, gameweeks)
+    with tabs[6]:
         _mini_league(players, squad, manager, metadata)
     with tabs[0]:
         _gameweek(players, schedule, squad, manager, horizon, gameweeks, metadata)

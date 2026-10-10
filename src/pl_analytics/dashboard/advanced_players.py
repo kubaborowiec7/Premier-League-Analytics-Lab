@@ -25,14 +25,22 @@ def _chip(short_name: object) -> str:
     return theme.club_chip(short_name) if isinstance(short_name, str) and short_name else ""
 
 
-def radar_chart(players: pd.DataFrame, metrics: list[str], *, height: int = 480) -> go.Figure:
-    """Plot comparable percentile axes, leaving absent observations as gaps, never zero."""
+def radar_chart(
+    players: pd.DataFrame,
+    metrics: list[str],
+    *,
+    height: int = 480,
+    axis_labels: dict[str, str] | None = None,
+    name_column: str | None = None,
+) -> go.Figure:
+    """Plot comparable percentile axes, leaving absent observations as gaps, never zero.
+
+    ``axis_labels`` and ``name_column`` let other entities (clubs) reuse the chart.
+    """
     figure = go.Figure()
+    names = axis_labels or {name: METRICS[name].label for name in metrics}
     # Long axis names wrap onto two lines so the radar keeps its size on a phone.
-    labels = [
-        "<br>".join(textwrap.wrap(METRICS[name].label, 16)) or METRICS[name].label
-        for name in metrics
-    ]
+    labels = ["<br>".join(textwrap.wrap(names[name], 16)) or names[name] for name in metrics]
     for color, (_, player) in zip(COLORS, players.iterrows(), strict=False):
         values = [player[f"{name}_percentile"] for name in metrics]
         top_shares = [None if pd.isna(value) else max(1, 100 - float(value)) for value in values]
@@ -42,7 +50,11 @@ def radar_chart(players: pd.DataFrame, metrics: list[str], *, height: int = 480)
             go.Scatterpolar(
                 r=values + values[:1],
                 theta=labels + labels[:1],
-                name=f"{player.player_name} · {player.season}",
+                name=(
+                    str(player[name_column])
+                    if name_column
+                    else f"{player.player_name} · {player.season}"
+                ),
                 mode="lines+markers",
                 line={"color": color, "width": 3},
                 marker={"size": 7},

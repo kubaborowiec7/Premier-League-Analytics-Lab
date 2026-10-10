@@ -9,6 +9,7 @@ import streamlit as st
 from pl_analytics.config import Settings
 from pl_analytics.dashboard import theme
 from pl_analytics.dashboard.data import ArtifactError, table
+from pl_analytics.dashboard.team_compare import render_team_compare, render_team_table
 
 STANDING_COLUMNS = (
     "competition_id",
@@ -285,8 +286,8 @@ def render_standings(settings: Settings, competition: str) -> None:
     simulation = table(root / "season_simulation.parquet")
     if not simulation.empty:
         simulation = simulation.loc[simulation.competition_id.eq(competition)]
-    table_tab, outlook_tab, performance_tab = st.tabs(
-        ["Table", "Season outlook", "Points vs expected"]
+    table_tab, outlook_tab, performance_tab, stats_tab, compare_tab = st.tabs(
+        ["Table", "Season outlook", "Points vs expected", "Team statistics", "Compare teams"]
     )
     with table_tab:
         _table(standings, form)
@@ -294,3 +295,17 @@ def render_standings(settings: Settings, competition: str) -> None:
         _outlook(simulation)
     with performance_tab:
         _performance(standings)
+    team_matches = table(settings.data_dir / "processed/advanced/team_matches.parquet")
+    if not team_matches.empty:
+        team_matches = team_matches.loc[team_matches.competition_id.eq(competition)]
+    season = str(standings.season.iloc[0])
+    with stats_tab:
+        render_team_table(team_matches, season=season, key="league_team_table")
+    with compare_tab:
+        leaders = standings.sort_values("position").get("club_short_name", pd.Series(dtype=str))
+        render_team_compare(
+            team_matches,
+            season=season,
+            default_clubs=tuple(leaders.dropna().head(2)),
+            key="league_team_compare",
+        )

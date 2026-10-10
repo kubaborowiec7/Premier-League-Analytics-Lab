@@ -755,7 +755,12 @@ def render(page: str = "Matchday Hub") -> None:
                         "FPL-Core-Insights"
                     )
                 ]
-                render_teams(advanced)
+                team_matches = table(
+                    settings.data_dir / "processed/advanced/team_matches.parquet"
+                )
+                if not team_matches.empty:
+                    team_matches = team_matches.loc[team_matches.competition_id.eq(competition)]
+                render_teams(advanced, team_matches)
             else:
                 competition_players = all_players.loc[
                     all_players.competition_id.eq(competition)

@@ -9,6 +9,7 @@ import pandas as pd
 
 from pl_analytics.config import get_settings
 from pl_analytics.data.advanced_players import load_season
+from pl_analytics.data.team_stats import load_team_matches
 from pl_analytics.features.advanced_players import METRICS, summarize_players
 
 
@@ -23,7 +24,7 @@ def main() -> None:
     settings = get_settings()
     if config["competition_id"] not in settings.active_competitions:
         raise ValueError("Competition must be enabled")
-    frames, coverage = [], []
+    frames, coverage, team_frames = [], [], []
     for season in config["seasons"]:
         matches = load_season(config, season, settings.data_dir / "raw", download=args.download)
         frame = summarize_players(matches, config["reference_date"])
@@ -33,6 +34,7 @@ def main() -> None:
         ):
             raise ValueError("Advanced season coverage differs from the pinned manifest")
         frames.append(frame)
+        team_frames.append(load_team_matches(config, season, settings.data_dir / "raw"))
         coverage.append(
             {
                 "competition_id": config["competition_id"],
@@ -47,6 +49,9 @@ def main() -> None:
     destination.mkdir(parents=True, exist_ok=True)
     pd.concat(frames, ignore_index=True).to_parquet(
         destination / "player_profiles.parquet", index=False
+    )
+    pd.concat(team_frames, ignore_index=True).to_parquet(
+        destination / "team_matches.parquet", index=False
     )
     (destination / "coverage.json").write_text(
         json.dumps(

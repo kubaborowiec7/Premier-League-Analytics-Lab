@@ -9,6 +9,7 @@ import streamlit as st
 from pl_analytics.dashboard import theme
 from pl_analytics.dashboard.advanced_players import COLORS, radar_chart
 from pl_analytics.dashboard.formatting import top_percent_label
+from pl_analytics.dashboard.team_compare import render_team_compare
 from pl_analytics.features.advanced_players import (
     METRICS,
     PROFILES,
@@ -259,7 +260,7 @@ def _compare(
         st.switch_page("pages/1_Player_Explorer.py")
 
 
-def render_teams(frame: pd.DataFrame) -> None:
+def render_teams(frame: pd.DataFrame, team_matches: pd.DataFrame | None = None) -> None:
     """Render one season squad with sortable metrics and explicit comparison cohorts."""
     required = {"club_id", "club_name", "club_short_name"}
     if not required <= set(frame) or frame.club_id.isna().all():
@@ -323,7 +324,11 @@ def render_teams(frame: pd.DataFrame) -> None:
     ranked = (league_squad if context == "League" else ranked_team).copy()
 
     _summary(squad, filtered, str(clubs[club_id]), squad.club_short_name.iloc[0])
-    table_tab, compare_tab = st.tabs(["Squad statistics", "Compare players"])
+    table_tab, compare_tab, clubs_tab = st.tabs(
+        ["Squad statistics", "Compare players", "Compare teams"]
+    )
+    with clubs_tab:
+        render_team_compare(team_matches, season=season, club_id=club_id)
     with table_tab:
         _squad_table(ranked, metrics, context=context, per90=per90, position=position)
     with compare_tab:

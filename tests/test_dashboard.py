@@ -254,7 +254,14 @@ def test_fpl_lab_and_backtest_render_from_synthetic_artifacts(isolated):
     assert "Transfer planner" in rendered and "Knock" in rendered
     app.switch_page("pages/3_League_Table.py").run(timeout=20)
     assert not app.exception and not app.error
-    assert [tab.label for tab in app.tabs] == ["Table", "Season outlook", "Points vs expected"]
+    assert [tab.label for tab in app.tabs] == [
+        "Table",
+        "Season outlook",
+        "Points vs expected",
+        "Team statistics",
+        "Compare teams",
+    ]
+    assert sum("not prepared for this season" in item.value for item in app.info) == 2
     rendered = " ".join(item.value for item in app.markdown)
     assert "200 simulated seasons" in rendered and "Where each club finishes" in rendered
     app.switch_page("pages/8_Match_Centre.py").run(timeout=20)

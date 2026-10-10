@@ -17,6 +17,7 @@ from pl_analytics.data.current_sources import (
 )
 from pl_analytics.data.fpl import build_fpl_artifacts
 from pl_analytics.data.match_history import read_match_history
+from pl_analytics.data.team_stats import load_team_matches
 from pl_analytics.features.advanced_players import METRICS, summarize_players
 from pl_analytics.models.live_match import build_live_match_artifacts
 
@@ -116,6 +117,16 @@ def main() -> None:
     temporary = destination / "player_profiles.parquet.tmp"
     profiles.to_parquet(temporary, index=False)
     temporary.replace(destination / "player_profiles.parquet")
+    team_matches = pd.concat(
+        [
+            load_team_matches(player_config, season, settings.data_dir / "raw")
+            for season in player_config["seasons"]
+        ],
+        ignore_index=True,
+    )
+    team_temp = destination / "team_matches.parquet.tmp"
+    team_matches.to_parquet(team_temp, index=False)
+    team_temp.replace(destination / "team_matches.parquet")
     player_coverage = {
         "commit": player_config["commit"],
         "reference_date": player_config["reference_date"],

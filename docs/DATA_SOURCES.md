@@ -246,6 +246,10 @@ onward. No value is backfilled for 2024/25.
 Completed current-season match snapshots also provide home/away xG. M17 uses those
 recorded values to calculate descriptive league-table xG, xGA and Poisson xPoints;
 missing match xG remains missing and is counted explicitly.
+The same match files carry each side's recorded team totals (shots, xG by phase, passes,
+possession, duels, cards and similar). `data.team_stats` reshapes them into one row per
+club and match for the Teams comparison, for every season in the player manifest; no
+further file is downloaded and missing values stay missing.
 The FPL Decision Lab additionally uses the official public Fantasy Premier League entry
 and event-picks JSON endpoints when `FPL_ENTRY_ID` is set. These calls are optional,
 require no login and are archived with retrieval metadata. Public entry data can expose

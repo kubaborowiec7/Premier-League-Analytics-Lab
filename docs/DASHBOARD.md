@@ -118,6 +118,10 @@ row, then tabs or cards for the content.
   refresh. It shows projected points with a 90% range, title, top-four and relegation
   probabilities and a finishing-position heatmap. Goal rates are held fixed for the whole
   season, so the probabilities are overconfident, and the simulator has no backtest yet.
+  Two further tabs use the club match statistics described under Teams: "Team statistics"
+  lists every club in a table that sorts by any statistic (per match or league rank, by
+  period and group) and "Compare teams" is the same comparison as on the Teams page,
+  starting with the top two of the table.
 - **Match Centre** – one upcoming fixture from the next five gameweeks: the live model's
   forecast, each club's position, record, xG per match, season outlook and last five
   results, expected goals by match, and each side's likeliest scorers and availability
@@ -125,8 +129,18 @@ row, then tabs or cards for the content.
 - **Match Predictor** – the forecast follows the club and model selectors (inference only,
   no button): outcome tiles, probability bar, derived markets and the 0–6 score grid.
   `dashboard.components` holds these pieces.
-- **Teams** – filters, squad summary cards, then "Squad statistics" and "Compare players"
-  (radar and scatter side by side).
+- **Teams** – filters, squad summary cards, then "Squad statistics", "Compare players"
+  (radar and scatter side by side) and "Compare teams". The last overlays up to five clubs
+  of the selected season on recorded match statistics in four groups (attack, defence,
+  possession & passing, discipline & set pieces) over the whole season, each club's last
+  five matches, or home or away matches only. It shows per-match averages with the league
+  rank, a radar of league ranks (flipped where lower is better, so further out is always
+  better) and a scatterplot of all clubs. It reads
+  `data/processed/advanced/team_matches.parquet` (one row per club and match, with the
+  opponent's totals as `*_against`), written by `refresh_current_data.py` and
+  `build_advanced_players.py` from the already archived match files;
+  `features.team_stats` holds the statistic catalogue and the aggregation. Everything is
+  descriptive; early in a season every figure is a small sample.
 - **Player Explorer / Scouting Finder** – filters and a player header, then Profile, Peers
   and Season statistics tabs; Scouting Finder adds Similar players first. The page opens on
   the role's most-used player, and the peer minutes threshold starts at half the most-played

@@ -43,10 +43,16 @@ The computer and network must be available. Override the time with `-DailyTime H
 The task uses the repository `.venv` and working directory. Re-running the installer
 updates the same task.
 
-There is deliberately no dashboard refresh button. A web request never downloads
-data, writes raw archives or fits models, which keeps the UI responsive and prevents
-concurrent visitors from creating inconsistent artifacts. To force an immediate
-local refresh, run the Python command above and reload the page.
+The **Data Coverage** page includes a **Refresh data now** button for an immediate
+refresh from the running dashboard. It executes the same command shown above and may
+take several minutes. A filesystem lock permits only one refresh at a time, including
+across multiple dashboard sessions. The UI clears its data/model caches after success;
+if download or validation fails, the previously published artifacts remain active and
+the page exposes the command log. The Streamlit process therefore needs network access
+and write access to the configured `DATA_DIR` and `ARTIFACT_DIR`.
+
+Scheduled refresh remains preferred for unattended operation. The button is useful for
+an explicit local update after a completed matchweek.
 
 ## Provenance and limitations
 

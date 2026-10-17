@@ -10,6 +10,7 @@ import joblib
 import pandas as pd
 
 from pl_analytics.config import get_settings
+from pl_analytics.dashboard.refresh import RefreshAlreadyRunningError, refresh_lock
 from pl_analytics.data.advanced_players import load_season
 from pl_analytics.data.current_sources import (
     discover_current_player_config,
@@ -159,4 +160,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        with refresh_lock(get_settings().artifact_dir):
+            main()
+    except RefreshAlreadyRunningError:
+        logging.error("A data refresh is already running")
+        raise SystemExit(3) from None

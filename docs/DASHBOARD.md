@@ -33,7 +33,9 @@ one club per season, so transfers are not split into separate club totals.
 
 The app caches tables/reports by path and content hash, and trusted model
 bundles by checksum (verified on every load request). It never fits, downloads or connects
-to PostgreSQL at startup or during prediction. Models must come from this project's
+to PostgreSQL at startup or during prediction. The explicit Data Coverage refresh action
+is the only full-pipeline exception and runs the documented producer in a subprocess.
+Models must come from this project's
 trusted local build: pickle/joblib is executable and must never be user-uploaded.
 Missing modules remain usable as explanatory empty states; malformed artifacts
 produce sanitized rebuild messages without connection strings or private content.
@@ -74,9 +76,11 @@ view remains the original limited M4 profile. See [ADVANCED_PLAYERS.md](ADVANCED
 
 ## Current refresh
 
-Run `python scripts/refresh_current_data.py` for an immediate update. The supplied
-GitHub Actions workflow and Windows Task Scheduler installer automate this outside
-the web process. Streamlit never fits models or downloads datasets on a button click.
+Run `python scripts/refresh_current_data.py` for an immediate update, or use **Refresh
+data now** on Data Coverage. The button runs that command in a subprocess, serializes
+runs with `ARTIFACT_DIR/.current-data-refresh.lock`, clears Streamlit caches after a
+successful publication and retains the last valid artifacts after a failure. The supplied
+GitHub Actions workflow and Windows Task Scheduler installer automate the same process.
 The interactive data requests are all explicit buttons in FPL Decision Lab: the
 public-team and mini-league lookups, the news update from the official player feed and
 the headline search for one player. They remain in session memory and send no
@@ -148,7 +152,8 @@ row, then tabs or cards for the content.
 - **Market Value** – "Player review" (values and an interval bar) and "All reviews".
 - **Model Lab** – headline cards and a bar chart of the experiment's primary metric above
   the full metric table; model cards open on demand.
-- **Data Coverage** – historical module counts and the freshness of current data.
+- **Data Coverage** – historical module counts, current-data freshness and the explicit
+  full refresh control.
 - **Betting Lab** – fair odds from the live goal model, a price checker for typed-in
   bookmaker odds and stake-tax/staking calculators, under a standing note that bookmakers
   have been more accurate than the model. The benchmark is the fifth Model Lab experiment.

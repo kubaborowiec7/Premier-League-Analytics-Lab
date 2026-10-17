@@ -14,7 +14,8 @@ flowchart TD
     F --> I[Player profiles and uncertainty]
     H --> J[Explicit dashboard preparation]
     I --> J
-    J --> K[Cached read-only Streamlit app]
+    J --> K[Cached Streamlit app]
+    K -->|Explicit refresh action| B
 ```
 
 The SQL and later file-based analytics paths are deliberately separate in V1.
@@ -252,8 +253,10 @@ league adjustments.
 ## Dashboard artifact boundary
 
 `dashboard/data.py` caches and validates local prepared tables and checksum-pinned
-model bundles. `dashboard/ui.py` renders eight pages without training, downloads or
-database access. The explicit `build_dashboard_data.py` CLI assembles display
+model bundles. Normal page rendering performs no training, downloads or database
+access. The Data Coverage page is the explicit exception: its user-triggered refresh
+control runs the same serialized operational producer as the command line. The
+explicit `build_dashboard_data.py` CLI assembles display
 names, bootstrap intervals and the latest frozen team states; see [DASHBOARD.md](DASHBOARD.md).
 
 ## Advanced multi-season player extension
@@ -268,8 +271,10 @@ comparison cohorts explicitly.
 
 ## Operational refresh boundary
 
-`scripts/refresh_current_data.py` is an external producer used by GitHub Actions or
-Windows Task Scheduler. It archives mutable current sources, validates completed
+`scripts/refresh_current_data.py` is an operational producer used by GitHub Actions,
+Windows Task Scheduler or the explicit Data Coverage action. The UI invokes it in a
+subprocess through `dashboard/refresh.py`; a shared artifact lock prevents overlapping
+runs. It archives mutable current sources, validates completed
 rows, rebuilds player profiles and fits a versioned statistical match snapshot using
 only results before its origin. The frozen M6/M7 reports remain the evaluation record.
 Streamlit reads `live_catalog.json` only after all referenced files exist and verifies

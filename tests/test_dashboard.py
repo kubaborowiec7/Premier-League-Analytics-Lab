@@ -13,6 +13,11 @@ from pl_analytics.config import Settings
 from pl_analytics.dashboard.data import ArtifactError, catalog, report, scenario, table
 from pl_analytics.dashboard.formatting import top_percent_label
 from pl_analytics.dashboard.match_centre import club_matches
+from pl_analytics.dashboard.refresh import (
+    RefreshAlreadyRunningError,
+    refresh_lock,
+    run_current_refresh,
+)
 from pl_analytics.features.fpl import (
     fixture_rows,
     latest_players,
@@ -46,6 +51,45 @@ def test_percentiles_are_presented_as_top_share():
     assert top_percent_label(99.9) == "Top 1%"
     assert top_percent_label(50) == "Top 50%"
     assert top_percent_label(float("nan")) == "—"
+
+
+def test_data_coverage_exposes_explicit_refresh_action(isolated):
+    app = AppTest.from_file(str(APP)).run(timeout=20)
+    app.switch_page("pages/6_Data_Coverage.py").run(timeout=20)
+    assert any(button.label == "Refresh data now" for button in app.button)
+
+
+def test_refresh_runner_serializes_processes(tmp_path, monkeypatch):
+    root = tmp_path / "project"
+    script = root / "scripts/refresh_current_data.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("pass\n")
+    artifacts = tmp_path / "artifacts"
+    calls = []
+
+    def completed(command, **kwargs):
+        calls.append((command, kwargs))
+        return type("Completed", (), {"returncode": 0, "stdout": "done", "stderr": ""})()
+
+    monkeypatch.setattr("subprocess.run", completed)
+    result = run_current_refresh(artifacts, project_root=root)
+    assert result.succeeded and result.output == "done"
+    assert calls[0][0][1] == str(script)
+    assert calls[0][1]["cwd"] == root
+    assert not (artifacts / ".current-data-refresh.lock").exists()
+
+    lock = artifacts / ".current-data-refresh.lock"
+    artifacts.mkdir()
+    lock.write_text("active")
+    with pytest.raises(RefreshAlreadyRunningError):
+        run_current_refresh(artifacts, project_root=root)
+
+    lock.unlink()
+    with refresh_lock(artifacts):
+        assert lock.exists()
+        with pytest.raises(RefreshAlreadyRunningError):
+            run_current_refresh(artifacts, project_root=root)
+    assert not lock.exists()
 
 
 @pytest.fixture

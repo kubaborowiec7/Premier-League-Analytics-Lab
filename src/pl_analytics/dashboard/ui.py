@@ -1,4 +1,4 @@
-"""Read-only Streamlit views of offline analytics and frozen model artifacts."""
+"""Streamlit views of prepared analytics, with one explicit operational refresh action."""
 
 import logging
 from html import escape
@@ -126,7 +126,55 @@ def _missing() -> None:
     st.caption("Prepare the offline artifacts using the commands in docs/DASHBOARD.md.")
 
 
+def _data_refresh(settings) -> None:
+    """Render an explicit, serialized refresh action on the data coverage page."""
+    from pl_analytics.dashboard.refresh import RefreshAlreadyRunningError, run_current_refresh
+
+    st.markdown("### Refresh current data")
+    st.caption(
+        "Downloads the latest published match, player and FPL snapshots, then rebuilds "
+        "the operational forecasts. It can take several minutes. Existing artifacts remain "
+        "available if validation fails."
+    )
+    prior = st.session_state.pop("current_refresh_result", None)
+    if prior:
+        if prior["succeeded"]:
+            st.success(
+                f"Data refreshed successfully in {prior['duration_seconds']:.0f} seconds."
+            )
+        else:
+            st.error("The refresh failed. The previous validated data is still active.")
+        if prior["output"]:
+            with st.expander("Refresh log"):
+                st.code(prior["output"][-8000:], language="text")
+    if not st.button(
+        "Refresh data now",
+        icon=":material/refresh:",
+        type="primary",
+        help="Uses public sources and rebuilds all current-data artifacts.",
+    ):
+        return
+    try:
+        with st.spinner("Refreshing current data and rebuilding forecasts…", show_time=True):
+            result = run_current_refresh(settings.artifact_dir)
+        st.session_state["current_refresh_result"] = {
+            "succeeded": result.succeeded,
+            "duration_seconds": result.duration_seconds,
+            "output": result.output,
+        }
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.rerun()
+    except RefreshAlreadyRunningError:
+        st.warning("Another refresh is already running. Try again after it finishes.")
+    except (OSError, FileNotFoundError) as error:
+        logging.warning("Cannot start current-data refresh: %s", type(error).__name__)
+        st.error("The refresh command could not be started from this installation.")
+
+
 def _overview(tables: dict, settings) -> None:
+    _data_refresh(settings)
+    st.divider()
     if all(frame.empty for frame in tables.values()):
         _missing()
         return
@@ -696,7 +744,7 @@ def _lab(settings, competition: str) -> None:
 
 
 def render(page: str = "Matchday Hub") -> None:
-    """Render a standalone page safely; all expensive preparation is an explicit CLI task."""
+    """Render a page; expensive preparation runs only through the explicit refresh action."""
     st.set_page_config(page_title=f"{page} · Analytics Lab", page_icon="⚽", layout="wide")
     theme.apply()
     try:

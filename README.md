@@ -26,6 +26,10 @@ python scripts/build_advanced_players.py --download
 python scripts/refresh_current_data.py
 ```
 
+The same current-data operation is available interactively from **Data Coverage →
+Refresh data now**. It is serialized with a process lock and keeps the last validated
+artifacts active if an update fails.
+
 The published source covers most requested shooting/passing/possession/defensive
 metrics, with meaningful gaps in the newest season. Progressive passes/carries and
 several other fields remain explicitly unavailable. [Definitions and reproduction](docs/ADVANCED_PLAYERS.md).
@@ -99,7 +103,8 @@ flowchart TD
     H --> J[Explicit dashboard preparation]
     S --> J
     I --> J
-    J --> K[Cached read-only Streamlit app]
+    J --> K[Cached Streamlit app]
+    K -->|Explicit refresh action| R
     E --> L[SQL analysis and integration checks]
 ```
 
